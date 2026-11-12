@@ -61,14 +61,14 @@
     section {
       background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden;
     }
-    section.new-section { border-color: #fdba74; box-shadow: 0 0 0 1px #ffedd5 inset; }
-    section.old-section { border-color: #d6d3d1; }
+    section.dash-section { border-color: #93c5fd; }
+    section.app-section { border-color: #fdba74; }
     section h2 {
       margin: 0; padding: 12px 14px; font-size: 1.05rem; border-bottom: 1px solid var(--line);
       display: flex; justify-content: space-between; gap: 8px; align-items: center;
     }
-    section.new-section h2 { background: linear-gradient(180deg, #fff7ed, #fff); }
-    section.old-section h2 { background: linear-gradient(180deg, #fafaf9, #fff); }
+    section.dash-section h2 { background: linear-gradient(180deg, #eff6ff, #fff); }
+    section.app-section h2 { background: linear-gradient(180deg, #fff7ed, #fff); }
     .list { padding: 0; max-height: 62vh; overflow: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
     th, td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: right; vertical-align: top; }
@@ -78,11 +78,10 @@
     tr.hidden { display: none; }
     td.check { width: 36px; }
     td.id { width: 56px; font-weight: 800; color: var(--accent); white-space: nowrap; }
-    td.side { width: 88px; }
     .title { font-size: 0.9rem; }
     .note { color: var(--muted); font-size: 0.78rem; margin-top: 3px; }
     input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--ok); cursor: pointer; }
-    .tag, .side-tag {
+    .tag {
       font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap;
       display: inline-block;
     }
@@ -90,8 +89,6 @@
     .tag.hot { background: var(--hot-bg); color: var(--hot); }
     .tag.done { background: var(--done-bg); color: var(--done); }
     .tag.todo { background: #f5f5f4; color: #57534e; }
-    .side-tag.dash { background: var(--dash-bg); color: var(--dash); }
-    .side-tag.app { background: var(--app-bg); color: var(--app); }
     footer { margin-top: 14px; color: var(--muted); font-size: 0.8rem; }
     .toast {
       position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
@@ -105,7 +102,7 @@
   <div class="wrap">
     <header>
       <h1>طلباتكم — متابعة التعديلات</h1>
-      <div class="sub">جدول للـ <strong>جديد</strong> وجدول للـ <strong>قديم</strong>. علّم ✓ على اللي خلص. تصدير/استيراد JSON للمشاركة.</div>
+      <div class="sub">جدول <strong>داشبورد</strong> فوق، وجدول <strong>موبايل</strong> تحت (البنود الجديدة في آخر كل جدول). علّم ✓ على اللي خلص.</div>
     </header>
 
     <div class="toolbar">
@@ -125,10 +122,10 @@
     </div>
 
     <div class="stack">
-      <section class="new-section">
+      <section class="dash-section">
         <h2>
-          <span>🆕 الجديد</span>
-          <span id="newCount" class="sub"></span>
+          <span>🖥️ الداشبورد</span>
+          <span id="dashCount" class="sub"></span>
         </h2>
         <div class="list">
           <table>
@@ -136,20 +133,19 @@
               <tr>
                 <th></th>
                 <th>#</th>
-                <th>النوع</th>
                 <th>التعديل</th>
                 <th>الوسم</th>
               </tr>
             </thead>
-            <tbody id="newBody"></tbody>
+            <tbody id="dashBody"></tbody>
           </table>
         </div>
       </section>
 
-      <section class="old-section">
+      <section class="app-section">
         <h2>
-          <span>📂 القديم / الجاري والمتنهّي</span>
-          <span id="oldCount" class="sub"></span>
+          <span>📱 الموبايل / الأبلكيشن</span>
+          <span id="appCount" class="sub"></span>
         </h2>
         <div class="list">
           <table>
@@ -157,12 +153,11 @@
               <tr>
                 <th></th>
                 <th>#</th>
-                <th>النوع</th>
                 <th>التعديل</th>
                 <th>الوسم</th>
               </tr>
             </thead>
-            <tbody id="oldBody"></tbody>
+            <tbody id="appBody"></tbody>
           </table>
         </div>
       </section>
@@ -250,9 +245,17 @@
     ];
 
     const TAG_LABEL = { done: "منتهى", new: "جديد", hot: "جديد هام", todo: "قديم/جاري" };
-    const SIDE_LABEL = { dash: "داشبورد", app: "أبلكيشن" };
 
     function isNewTask(t) { return t.tag === "new" || t.tag === "hot"; }
+
+    function sortSide(tasks) {
+      return tasks.slice().sort((a, b) => {
+        const an = isNewTask(a) ? 1 : 0;
+        const bn = isNewTask(b) ? 1 : 0;
+        if (an !== bn) return an - bn;
+        return 0;
+      });
+    }
 
     function loadState() {
       try {
@@ -307,7 +310,6 @@
       tr.innerHTML = `
         <td class="check"><input type="checkbox" ${isDone ? "checked" : ""} aria-label="تم ${t.id}" /></td>
         <td class="id">${t.id}</td>
-        <td class="side"><span class="side-tag ${t.side}">${SIDE_LABEL[t.side]}</span></td>
         <td>
           <div class="title">${t.title}</div>
           ${t.note ? `<div class="note">${t.note}</div>` : ""}
@@ -325,36 +327,32 @@
       return tr;
     }
 
-    function render() {
-      const newBody = document.getElementById("newBody");
-      const oldBody = document.getElementById("oldBody");
-      newBody.innerHTML = "";
-      oldBody.innerHTML = "";
-
-      let done = 0;
-      let newTotal = 0, newDone = 0, oldTotal = 0, oldDone = 0;
-
-      TASKS.forEach(t => {
+    function fillBody(bodyId, tasks) {
+      const body = document.getElementById(bodyId);
+      body.innerHTML = "";
+      let total = 0, doneCount = 0;
+      sortSide(tasks).forEach(t => {
         const isDone = !!checks[t.id];
-        if (isDone) done += 1;
-        const row = makeRow(t, isDone);
-
-        if (isNewTask(t)) {
-          newTotal += 1;
-          if (isDone) newDone += 1;
-          newBody.appendChild(row);
-        } else {
-          oldTotal += 1;
-          if (isDone) oldDone += 1;
-          oldBody.appendChild(row);
-        }
+        total += 1;
+        if (isDone) doneCount += 1;
+        body.appendChild(makeRow(t, isDone));
       });
+      return { total, doneCount };
+    }
 
+    function render() {
+      const dashTasks = TASKS.filter(t => t.side === "dash");
+      const appTasks = TASKS.filter(t => t.side === "app");
+
+      const dash = fillBody("dashBody", dashTasks);
+      const app = fillBody("appBody", appTasks);
+
+      const done = Object.keys(checks).filter(k => checks[k]).length;
       const total = TASKS.length;
       document.getElementById("progressText").textContent = `${done} / ${total} منتهي`;
       document.getElementById("progressBar").style.width = `${Math.round((done / total) * 100)}%`;
-      document.getElementById("newCount").textContent = `${newDone}/${newTotal}`;
-      document.getElementById("oldCount").textContent = `${oldDone}/${oldTotal}`;
+      document.getElementById("dashCount").textContent = `${dash.doneCount}/${dash.total}`;
+      document.getElementById("appCount").textContent = `${app.doneCount}/${app.total}`;
     }
 
     document.querySelectorAll(".filters button").forEach(btn => {
