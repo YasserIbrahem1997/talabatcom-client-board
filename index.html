@@ -195,42 +195,49 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    const STORAGE_KEY = "talabatcom-client-board-v1";
+    const STORAGE_KEY = "talabatcom-client-board-v2";
+    const LEGACY_STORAGE_KEY = "talabatcom-client-board-v1";
+    // Client confirmed done 2026-11-12 — force even if old localStorage had them unchecked
+    const FORCE_DONE = [
+      "D3", "D7", "D8", "D15", "D16", "D21", "D22",
+      "A2", "A3", "A4", "A7", "A15", "A21", "A23", "A26", "A34", "A35",
+      "X1", "X2", "X3"
+    ];
 
     const TASKS = [
       { id: "D1", side: "dash", title: "تطوير صفحة العملاء (فلاتر + دمج + إشعار شرائح + رسم بياني + ترتيب)", tag: "todo", note: "في الشيت: منتهى — راجع اللايف", defaultDone: false },
       { id: "D2", side: "dash", title: "تشغيل كل العناصر وتثبت حسب الاختيار", tag: "todo", defaultDone: false },
-      { id: "D3", side: "dash", title: "تعديل صفحة الدخول/تسجيل (أرقام/إيميلات غير صحيحة)", tag: "todo", note: "في الشيت: منتهى", defaultDone: false },
+      { id: "D3", side: "dash", title: "تعديل صفحة الدخول/تسجيل (أرقام/إيميلات غير صحيحة)", tag: "done", note: "خلّص — تأكيد العميل 2026-11-12", defaultDone: true },
       { id: "D4", side: "dash", title: "إضافة قسم «قد يعجبك أيضا»", tag: "new", defaultDone: false },
       { id: "D5", side: "dash", title: "تثبيت العنوان للأكونت", tag: "todo", defaultDone: false },
       { id: "D6", side: "dash", title: "تشغيل تحديد وقت الإشعارات (وقفت تاني)", tag: "todo", defaultDone: false },
-      { id: "D7", side: "dash", title: "جدول زمني في وحدة التجارة الإلكترونية", tag: "todo", note: "في الشيت: منتهى", defaultDone: false },
-      { id: "D8", side: "dash", title: "جدول زمني داخل إضافة المنتج (يظهر في العروض فقط)", tag: "hot", defaultDone: false },
+      { id: "D7", side: "dash", title: "جدول زمني في وحدة التجارة الإلكترونية", tag: "done", note: "خلّص — تأكيد العميل 2026-11-12", defaultDone: true },
+      { id: "D8", side: "dash", title: "جدول زمني داخل إضافة المنتج (يظهر في العروض فقط)", tag: "done", note: "خلّص — تأكيد العميل 2026-11-12", defaultDone: true },
       { id: "D9", side: "dash", title: "صفحة تصميم/كتابة للعروض", tag: "new", defaultDone: false },
       { id: "D10", side: "dash", title: "أيقونة جديدة في القائمة الرئيسية (مطاعم/محلات مختارة)", tag: "new", defaultDone: false },
       { id: "D11", side: "dash", title: "خصم بعدد طلبات/قيمة + إشعار للعميل", tag: "todo", defaultDone: false },
       { id: "D12", side: "dash", title: "صفحة العملاء — رضا العملاء", tag: "new", defaultDone: false },
       { id: "D13", side: "dash", title: "تعديل تاريخ/ساعة انضمام العميل", tag: "new", defaultDone: false },
       { id: "D14", side: "dash", title: "العروض داخل المتجر نفسه", tag: "todo", defaultDone: false },
-      { id: "D15", side: "dash", title: "شكل الأقسام الفرعية + صور", tag: "todo", note: "في الشيت: منتهى", defaultDone: false },
-      { id: "D16", side: "dash", title: "تظبيط اللوكيشن والخرائط", tag: "todo", note: "في الشيت: منتهي", defaultDone: false },
+      { id: "D15", side: "dash", title: "شكل الأقسام الفرعية + صور", tag: "done", note: "خلّص — تأكيد العميل 2026-11-12", defaultDone: true },
+      { id: "D16", side: "dash", title: "تظبيط اللوكيشن والخرائط", tag: "done", note: "خلّص — تأكيد العميل 2026-11-12", defaultDone: true },
       { id: "D17", side: "dash", title: "منتج/متجر لأكتر من فئة في نفس الوقت", tag: "new", defaultDone: false },
       { id: "D18", side: "dash", title: "بانر يخص فئة واحدة → يفتح كل منتجات الفئة", tag: "new", defaultDone: false },
       { id: "D19", side: "dash", title: "تعديل على التقييم", tag: "todo", defaultDone: false },
       { id: "D20", side: "dash", title: "شكل الفاتورة في الداشبورد", tag: "new", defaultDone: false },
       { id: "D21", side: "dash", title: "المتغيرات لوحدة الخضروات والمتاجر الإلكترونية", tag: "done", note: "مرتبط بإصلاح التطبيق 2026-11-09", defaultDone: true },
-      { id: "D22", side: "dash", title: "زر قفل المتجر مؤقتاً", tag: "todo", note: "في الشيت: منتهي", defaultDone: false },
+      { id: "D22", side: "dash", title: "زر قفل المتجر مؤقتاً", tag: "done", note: "خلّص — تأكيد العميل 2026-11-12", defaultDone: true },
       { id: "D23", side: "dash", title: "المتاجر المتعددة × كاش باك/عروض/ولاء", tag: "new", defaultDone: false },
       { id: "D24", side: "dash", title: "تحديد معاد الطلب واستقبال المسؤول (متعدد)", tag: "new", defaultDone: false },
       { id: "D25", side: "dash", title: "الأسعار لا تقبل الصفر والكسور (10.5→11)", tag: "todo", note: "في الشيت: منتهي", defaultDone: false },
 
       { id: "A1", side: "app", title: "تعديل صفحة الدخول (هام جدا)", tag: "todo", defaultDone: false },
       { id: "A2", side: "app", title: "نقاط الولاء + وقت + الرئيسية", tag: "done", defaultDone: true },
-      { id: "A3", side: "app", title: "تعديل الكاش باك", tag: "todo", defaultDone: false },
-      { id: "A4", side: "app", title: "الصفحة الرئيسية", tag: "todo", defaultDone: false },
+      { id: "A3", side: "app", title: "تعديل الكاش باك", tag: "done", note: "خلّص — تأكيد العميل 2026-11-12", defaultDone: true },
+      { id: "A4", side: "app", title: "الصفحة الرئيسية", tag: "done", note: "خلّص — تأكيد العميل 2026-11-12", defaultDone: true },
       { id: "A5", side: "app", title: "هل ترغب / أكواد قسائم الخصم", tag: "todo", defaultDone: false },
       { id: "A6", side: "app", title: "الخصم على المنيو كله", tag: "todo", defaultDone: false },
-      { id: "A7", side: "app", title: "شكل المشاركة والكسب", tag: "todo", defaultDone: false },
+      { id: "A7", side: "app", title: "شكل المشاركة والكسب", tag: "done", note: "خلّص — تأكيد العميل 2026-11-12", defaultDone: true },
       { id: "A8", side: "app", title: "شكل التوصيل مجاناً بحد أدنى", tag: "todo", defaultDone: false },
       { id: "A9", side: "app", title: "إشعار → يفتح الصفحة + متابعة للمطعم", tag: "todo", defaultDone: false },
       { id: "A10", side: "app", title: "مكان الريفيو + «تقييمك يهمنا»", tag: "todo", defaultDone: false },
@@ -238,7 +245,7 @@
       { id: "A12", side: "app", title: "اسم المتجر في السلة + تثبيت أول اختيار للصنف", tag: "new", note: "اسم المتجر تم · تثبيت أول اختيار يحتاج تأكيد", defaultDone: false },
       { id: "A13", side: "app", title: "فونت Cairo", tag: "new", defaultDone: false },
       { id: "A14", side: "app", title: "العروض داخل المتجر", tag: "new", defaultDone: false },
-      { id: "A15", side: "app", title: "أقسام فرعية + صور", tag: "todo", note: "في الشيت: منتهى", defaultDone: false },
+      { id: "A15", side: "app", title: "أقسام فرعية + صور", tag: "done", note: "خلّص — تأكيد العميل 2026-11-12", defaultDone: true },
       { id: "A16", side: "app", title: "كتابة أكواد الخصم داخل المتجر", tag: "new", defaultDone: false },
       { id: "A17", side: "app", title: "تقييم المتجر والأصناف", tag: "new", defaultDone: false },
       { id: "A18", side: "app", title: "تثبيت أكواد الخصم", tag: "new", defaultDone: false },
@@ -246,10 +253,10 @@
       { id: "A20", side: "app", title: "شكل السلة من فوق", tag: "new", defaultDone: false },
       { id: "A21", side: "app", title: "جملة «مشغول الآن» للمتاجر", tag: "done", defaultDone: true },
       { id: "A22", side: "app", title: "البانر وحذف الرقم", tag: "todo", defaultDone: false },
-      { id: "A23", side: "app", title: "زر على المتاجر مؤقتاً", tag: "todo", defaultDone: false },
+      { id: "A23", side: "app", title: "زر على المتاجر مؤقتاً", tag: "done", note: "خلّص — تأكيد العميل 2026-11-12", defaultDone: true },
       { id: "A24", side: "app", title: "جملة الكاش باك / خصم الكوبونات", tag: "todo", defaultDone: false },
       { id: "A25", side: "app", title: "كشف/تعديل الخصم على المنيو كله", tag: "todo", defaultDone: false },
-      { id: "A26", side: "app", title: "دخول: فون إجباري / إيميل اختياري", tag: "todo", note: "في الشيت: منتهى", defaultDone: false },
+      { id: "A26", side: "app", title: "دخول: فون إجباري / إيميل اختياري", tag: "done", note: "خلّص — تأكيد العميل 2026-11-12", defaultDone: true },
       { id: "A27", side: "app", title: "الملف الشخصي", tag: "new", defaultDone: false },
       { id: "A28", side: "app", title: "جملة انضم لطلباتكم / أماكن جديدة", tag: "new", defaultDone: false },
       { id: "A29", side: "app", title: "أوردر فاضي للداشبورد", tag: "new", defaultDone: false },
@@ -258,7 +265,7 @@
       { id: "A32", side: "app", title: "شكل مربع إضافة السلة", tag: "new", defaultDone: false },
       { id: "A33", side: "app", title: "أيقونة رسائل الدردشة", tag: "todo", defaultDone: false },
       { id: "A34", side: "app", title: "تشغيل التباين المتغير (grocery multi + أسعار)", tag: "done", note: "APK 2026-11-09", defaultDone: true },
-      { id: "A35", side: "app", title: "صفحة الهبوط", tag: "todo", note: "في الشيت: منتهى", defaultDone: false },
+      { id: "A35", side: "app", title: "صفحة الهبوط (Hostinger)", tag: "done", note: "خلّص — تأكيد العميل 2026-11-12", defaultDone: true },
       { id: "A36", side: "app", title: "نبذة عن رسوم الخدمة/التوصيل/المتعدد", tag: "new", defaultDone: false },
       { id: "A37", side: "app", title: "القسائم والكاش باك داخل المتجر", tag: "todo", defaultDone: false },
       { id: "A38", side: "app", title: "شكل المحفظة وصفحة الدفع", tag: "todo", note: "جزئي في الكود", defaultDone: false },
@@ -277,7 +284,7 @@
 
     function loadState() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
+        const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
         if (!raw) return null;
         return JSON.parse(raw);
       } catch (_) { return null; }
@@ -293,6 +300,7 @@
     function defaultMap() {
       const map = {};
       TASKS.forEach(t => { map[t.id] = !!t.defaultDone; });
+      FORCE_DONE.forEach(id => { map[id] = true; });
       return map;
     }
 
@@ -302,6 +310,8 @@
       if (saved && saved.checks) {
         Object.keys(saved.checks).forEach(k => { base[k] = !!saved.checks[k]; });
       }
+      FORCE_DONE.forEach(id => { base[id] = true; });
+      saveState(base);
       return base;
     })();
 
