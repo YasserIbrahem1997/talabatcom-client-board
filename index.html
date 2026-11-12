@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>طلباتكم — متابعة تعديلات العميل</title>
+  <style>
+    :root {
+      --bg: #f4f1ec;
+      --card: #fffdf9;
+      --ink: #1c1917;
+      --muted: #78716c;
+      --line: #e7e5e4;
+      --done: #166534;
+      --done-bg: #dcfce7;
+      --new: #9a3412;
+      --new-bg: #ffedd5;
+      --hot: #991b1b;
+      --hot-bg: #fee2e2;
+      --accent: #dc2626;
+      --ok: #16a34a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      background:
+        radial-gradient(900px 400px at 100% 0%, #fecaca55, transparent),
+        radial-gradient(700px 300px at 0% 20%, #fed7aa55, transparent),
+        var(--bg);
+      color: var(--ink);
+      line-height: 1.45;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 70px; }
+    header { margin-bottom: 16px; }
+    h1 { margin: 0; font-size: 1.55rem; }
+    .sub { color: var(--muted); margin-top: 6px; font-size: 0.92rem; }
+    .toolbar {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+      margin: 14px 0 18px; padding: 12px; background: var(--card);
+      border: 1px solid var(--line); border-radius: 14px;
+    }
+    .progress {
+      flex: 1; min-width: 180px; font-weight: 700; color: var(--accent);
+    }
+    .bar {
+      height: 8px; background: #e7e5e4; border-radius: 99px; overflow: hidden;
+      margin-top: 6px; max-width: 280px;
+    }
+    .bar > span { display: block; height: 100%; background: var(--ok); width: 0%; transition: width .25s; }
+    button, .btn {
+      border: 1px solid var(--line); background: #fff; color: var(--ink);
+      border-radius: 10px; padding: 8px 12px; font: inherit; cursor: pointer;
+    }
+    button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    button:hover { filter: brightness(0.97); }
+    .filters { display: flex; flex-wrap: wrap; gap: 8px; }
+    .filters button.active { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+    section {
+      background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden;
+    }
+    section h2 {
+      margin: 0; padding: 12px 14px; font-size: 1.02rem; border-bottom: 1px solid var(--line);
+      display: flex; justify-content: space-between; gap: 8px; align-items: center;
+    }
+    .list { padding: 6px 0; max-height: 70vh; overflow: auto; }
+    .item {
+      display: grid; grid-template-columns: 28px 54px 1fr auto; gap: 8px;
+      align-items: start; padding: 10px 12px; border-bottom: 1px solid var(--line);
+    }
+    .item:last-child { border-bottom: 0; }
+    .item.done-row { background: #f0fdf4; }
+    .item.hidden { display: none; }
+    .item input { width: 18px; height: 18px; margin-top: 3px; accent-color: var(--ok); cursor: pointer; }
+    .id { font-weight: 800; color: var(--accent); }
+    .title { font-size: 0.9rem; }
+    .note { color: var(--muted); font-size: 0.78rem; margin-top: 3px; }
+    .tag {
+      font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+    }
+    .tag.new { background: var(--new-bg); color: var(--new); }
+    .tag.hot { background: var(--hot-bg); color: var(--hot); }
+    .tag.done { background: var(--done-bg); color: var(--done); }
+    .tag.todo { background: #f5f5f4; color: #57534e; }
+    .extra {
+      margin-top: 14px; padding: 14px; background: var(--card);
+      border: 1px solid var(--line); border-radius: 16px;
+    }
+    .extra h3 { margin: 0 0 8px; font-size: 1rem; }
+    .extra ul { margin: 0; padding-inline-start: 18px; }
+    footer { margin-top: 14px; color: var(--muted); font-size: 0.8rem; }
+    .toast {
+      position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+      background: #1c1917; color: #fff; padding: 10px 14px; border-radius: 999px;
+      font-size: 0.85rem; opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 20;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>طلباتكم — متابعة التعديلات</h1>
+      <div class="sub">علّم ✓ على اللي خلص. التقدم بيتسجل على نفس الجهاز/المتصفح. تقدر تصدّر/تستورد نسخة للمتابعة المشتركة.</div>
+    </header>
+
+    <div class="toolbar">
+      <div class="progress">
+        <div id="progressText">0 / 0 منتهي</div>
+        <div class="bar"><span id="progressBar"></span></div>
+      </div>
+      <div class="filters">
+        <button type="button" data-filter="all" class="active">الكل</button>
+        <button type="button" data-filter="open">المتبقي</button>
+        <button type="button" data-filter="done">المنتهي</button>
+        <button type="button" data-filter="new">الجديد فقط</button>
+      </div>
+      <button type="button" id="exportBtn">تصدير JSON</button>
+      <button type="button" id="importBtn">استيراد JSON</button>
+      <input type="file" id="importFile" accept="application/json,.json" hidden />
+      <button type="button" id="resetBtn">إعادة ضبط العلامات</button>
+    </div>
+
+    <div class="grid">
+      <section>
+        <h2><span>الداش بورد</span><span id="dashCount" class="sub"></span></h2>
+        <div class="list" id="dashList"></div>
+      </section>
+      <section>
+        <h2><span>الأبلكيشن</span><span id="appCount" class="sub"></span></h2>
+        <div class="list" id="appList"></div>
+      </section>
+    </div>
+
+    <div class="extra">
+      <h3>تحديثات تنفيذ أخيرة (نوفمبر 2026)</h3>
+      <ul>
+        <li>متعدد الاختيارات في البقالة + جمع أسعار الـ variations صح</li>
+        <li>سعر السلة يعرض الاختيارات + الإضافات</li>
+        <li>إصلاح «المتجر مغلق» الكاذب مع المواعيد الليلية (مثل 10→3)</li>
+        <li>APK عميل: 2026-11-09</li>
+      </ul>
+    </div>
+
+    <footer>طلباتكم · بورد متابعة العميل · التخزين المحلي: talabatcom-client-board-v1</footer>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const STORAGE_KEY = "talabatcom-client-board-v1";
+
+    const TASKS = [
+      // Dashboard
+      { id: "D1", side: "dash", title: "تطوير صفحة العملاء (فلاتر + دمج + إشعار شرائح + رسم بياني + ترتيب)", tag: "todo", note: "في الشيت: منتهى — راجع اللايف", defaultDone: false },
+      { id: "D2", side: "dash", title: "تشغيل كل العناصر وتثبت حسب الاختيار", tag: "todo", defaultDone: false },
+      { id: "D3", side: "dash", title: "تعديل صفحة الدخول/تسجيل (أرقام/إيميلات غير صحيحة)", tag: "todo", note: "في الشيت: منتهى", defaultDone: false },
+      { id: "D4", side: "dash", title: "إضافة قسم «قد يعجبك أيضا»", tag: "new", defaultDone: false },
+      { id: "D5", side: "dash", title: "تثبيت العنوان للأكونت", tag: "todo", defaultDone: false },
+      { id: "D6", side: "dash", title: "تشغيل تحديد وقت الإشعارات (وقفت تاني)", tag: "todo", defaultDone: false },
+      { id: "D7", side: "dash", title: "جدول زمني في وحدة التجارة الإلكترونية", tag: "todo", note: "في الشيت: منتهى", defaultDone: false },
+      { id: "D8", side: "dash", title: "جدول زمني داخل إضافة المنتج (يظهر في العروض فقط)", tag: "hot", defaultDone: false },
+      { id: "D9", side: "dash", title: "صفحة تصميم/كتابة للعروض", tag: "new", defaultDone: false },
+      { id: "D10", side: "dash", title: "أيقونة جديدة في القائمة الرئيسية (مطاعم/محلات مختارة)", tag: "new", defaultDone: false },
+      { id: "D11", side: "dash", title: "خصم بعدد طلبات/قيمة + إشعار للعميل", tag: "todo", defaultDone: false },
+      { id: "D12", side: "dash", title: "صفحة العملاء — رضا العملاء", tag: "new", defaultDone: false },
+      { id: "D13", side: "dash", title: "تعديل تاريخ/ساعة انضمام العميل", tag: "new", defaultDone: false },
+      { id: "D14", side: "dash", title: "العروض داخل المتجر نفسه", tag: "todo", defaultDone: false },
+      { id: "D15", side: "dash", title: "شكل الأقسام الفرعية + صور", tag: "todo", note: "في الشيت: منتهى", defaultDone: false },
+      { id: "D16", side: "dash", title: "تظبيط اللوكيشن والخرائط", tag: "todo", note: "في الشيت: منتهي", defaultDone: false },
+      { id: "D17", side: "dash", title: "منتج/متجر لأكتر من فئة في نفس الوقت", tag: "new", defaultDone: false },
+      { id: "D18", side: "dash", title: "بانر يخص فئة واحدة → يفتح كل منتجات الفئة", tag: "new", defaultDone: false },
+      { id: "D19", side: "dash", title: "تعديل على التقييم", tag: "todo", defaultDone: false },
+      { id: "D20", side: "dash", title: "شكل الفاتورة في الداشبورد", tag: "new", defaultDone: false },
+      { id: "D21", side: "dash", title: "المتغيرات لوحدة الخضروات والمتاجر الإلكترونية", tag: "done", note: "مرتبط بإصلاح التطبيق 2026-11-09", defaultDone: true },
+      { id: "D22", side: "dash", title: "زر قفل المتجر مؤقتاً", tag: "todo", note: "في الشيت: منتهي", defaultDone: false },
+      { id: "D23", side: "dash", title: "المتاجر المتعددة × كاش باك/عروض/ولاء", tag: "new", defaultDone: false },
+      { id: "D24", side: "dash", title: "تحديد معاد الطلب واستقبال المسؤول (متعدد)", tag: "new", defaultDone: false },
+      { id: "D25", side: "dash", title: "الأسعار لا تقبل الصفر والكسور (10.5→11)", tag: "todo", note: "في الشيت: منتهي", defaultDone: false },
+
+      // App
+      { id: "A1", side: "app", title: "تعديل صفحة الدخول (هام جدا)", tag: "todo", defaultDone: false },
+      { id: "A2", side: "app", title: "نقاط الولاء + وقت + الرئيسية", tag: "done", defaultDone: true },
+      { id: "A3", side: "app", title: "تعديل الكاش باك", tag: "todo", defaultDone: false },
+      { id: "A4", side: "app", title: "الصفحة الرئيسية", tag: "todo", defaultDone: false },
+      { id: "A5", side: "app", title: "هل ترغب / أكواد قسائم الخصم", tag: "todo", defaultDone: false },
+      { id: "A6", side: "app", title: "الخصم على المنيو كله", tag: "todo", defaultDone: false },
+      { id: "A7", side: "app", title: "شكل المشاركة والكسب", tag: "todo", defaultDone: false },
+      { id: "A8", side: "app", title: "شكل التوصيل مجاناً بحد أدنى", tag: "todo", defaultDone: false },
+      { id: "A9", side: "app", title: "إشعار → يفتح الصفحة + متابعة للمطعم", tag: "todo", defaultDone: false },
+      { id: "A10", side: "app", title: "مكان الريفيو + «تقييمك يهمنا»", tag: "todo", defaultDone: false },
+      { id: "A11", side: "app", title: "خانة الملاحظات + هاتلي", tag: "todo", defaultDone: false },
+      { id: "A12", side: "app", title: "اسم المتجر في السلة + تثبيت أول اختيار للصنف", tag: "new", note: "اسم المتجر تم · تثبيت أول اختيار يحتاج تأكيد", defaultDone: false },
+      { id: "A13", side: "app", title: "فونت Cairo", tag: "new", defaultDone: false },
+      { id: "A14", side: "app", title: "العروض داخل المتجر", tag: "new", defaultDone: false },
+      { id: "A15", side: "app", title: "أقسام فرعية + صور", tag: "todo", note: "في الشيت: منتهى", defaultDone: false },
+      { id: "A16", side: "app", title: "كتابة أكواد الخصم داخل المتجر", tag: "new", defaultDone: false },
+      { id: "A17", side: "app", title: "تقييم المتجر والأصناف", tag: "new", defaultDone: false },
+      { id: "A18", side: "app", title: "تثبيت أكواد الخصم", tag: "new", defaultDone: false },
+      { id: "A19", side: "app", title: "تفاصيل الطلب مش بتفتح بعد الإشعار", tag: "new", defaultDone: false },
+      { id: "A20", side: "app", title: "شكل السلة من فوق", tag: "new", defaultDone: false },
+      { id: "A21", side: "app", title: "جملة «مشغول الآن» للمتاجر", tag: "done", defaultDone: true },
+      { id: "A22", side: "app", title: "البانر وحذف الرقم", tag: "todo", defaultDone: false },
+      { id: "A23", side: "app", title: "زر على المتاجر مؤقتاً", tag: "todo", defaultDone: false },
+      { id: "A24", side: "app", title: "جملة الكاش باك / خصم الكوبونات", tag: "todo", defaultDone: false },
+      { id: "A25", side: "app", title: "كشف/تعديل الخصم على المنيو كله", tag: "todo", defaultDone: false },
+      { id: "A26", side: "app", title: "دخول: فون إجباري / إيميل اختياري", tag: "todo", note: "في الشيت: منتهى", defaultDone: false },
+      { id: "A27", side: "app", title: "الملف الشخصي", tag: "new", defaultDone: false },
+      { id: "A28", side: "app", title: "جملة انضم لطلباتكم / أماكن جديدة", tag: "new", defaultDone: false },
+      { id: "A29", side: "app", title: "أوردر فاضي للداشبورد", tag: "new", defaultDone: false },
+      { id: "A30", side: "app", title: "كتابة اسم العميل على التطبيق", tag: "new", defaultDone: false },
+      { id: "A31", side: "app", title: "الإشعارات تفتح على صفحة المتجر", tag: "new", defaultDone: false },
+      { id: "A32", side: "app", title: "شكل مربع إضافة السلة", tag: "new", defaultDone: false },
+      { id: "A33", side: "app", title: "أيقونة رسائل الدردشة", tag: "todo", defaultDone: false },
+      { id: "A34", side: "app", title: "تشغيل التباين المتغير (grocery multi + أسعار)", tag: "done", note: "APK 2026-11-09", defaultDone: true },
+      { id: "A35", side: "app", title: "صفحة الهبوط", tag: "todo", note: "في الشيت: منتهى", defaultDone: false },
+      { id: "A36", side: "app", title: "نبذة عن رسوم الخدمة/التوصيل/المتعدد", tag: "new", defaultDone: false },
+      { id: "A37", side: "app", title: "القسائم والكاش باك داخل المتجر", tag: "todo", defaultDone: false },
+      { id: "A38", side: "app", title: "شكل المحفظة وصفحة الدفع", tag: "todo", note: "جزئي في الكود", defaultDone: false },
+      { id: "A39", side: "app", title: "منتج غير متوفر → إخفاء إضافة السلة", tag: "new", defaultDone: false },
+      { id: "A40", side: "app", title: "شكل رؤية الطلب في السلة", tag: "new", defaultDone: false },
+      { id: "A41", side: "app", title: "صفحات: متاجر / مميزة / أماكن جديدة / عروض / الأكثر مبيعاً", tag: "new", defaultDone: false },
+
+      // Extra recent work as trackable rows
+      { id: "X1", side: "app", title: "سعر السلة = اختيارات + إضافات (عرض واضح للعميل)", tag: "done", note: "مضاف نوفمبر 2026", defaultDone: true },
+      { id: "X2", side: "app", title: "إصلاح «المتجر مغلق» مع مواعيد overnight", tag: "done", note: "مضاف نوفمبر 2026", defaultDone: true },
+      { id: "X3", side: "app", title: "APK عميل 2026-11-09", tag: "done", defaultDone: true }
+    ];
+
+    const TAG_LABEL = { done: "منتهى", new: "جديد", hot: "جديد هام", todo: "مفتوح" };
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw);
+      } catch (_) { return null; }
+    }
+
+    function saveState(map) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        updatedAt: new Date().toISOString(),
+        checks: map
+      }));
+    }
+
+    function defaultMap() {
+      const map = {};
+      TASKS.forEach(t => { map[t.id] = !!t.defaultDone; });
+      return map;
+    }
+
+    let checks = (() => {
+      const saved = loadState();
+      const base = defaultMap();
+      if (saved && saved.checks) {
+        Object.keys(saved.checks).forEach(k => { base[k] = !!saved.checks[k]; });
+      }
+      return base;
+    })();
+
+    let filter = "all";
+
+    function toast(msg) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.classList.add("show");
+      setTimeout(() => el.classList.remove("show"), 1800);
+    }
+
+    function render() {
+      const dash = document.getElementById("dashList");
+      const app = document.getElementById("appList");
+      dash.innerHTML = "";
+      app.innerHTML = "";
+
+      let done = 0;
+      TASKS.forEach(t => {
+        const isDone = !!checks[t.id];
+        if (isDone) done += 1;
+
+        const row = document.createElement("div");
+        row.className = "item" + (isDone ? " done-row" : "");
+        row.dataset.id = t.id;
+        row.dataset.side = t.side;
+        row.dataset.tag = t.tag;
+        row.dataset.done = isDone ? "1" : "0";
+
+        const show =
+          filter === "all" ||
+          (filter === "done" && isDone) ||
+          (filter === "open" && !isDone) ||
+          (filter === "new" && (t.tag === "new" || t.tag === "hot"));
+        if (!show) row.classList.add("hidden");
+
+        row.innerHTML = `
+          <input type="checkbox" ${isDone ? "checked" : ""} aria-label="تم ${t.id}" />
+          <div class="id">${t.id}</div>
+          <div>
+            <div class="title">${t.title}</div>
+            ${t.note ? `<div class="note">${t.note}</div>` : ""}
+          </div>
+          <span class="tag ${t.tag}">${TAG_LABEL[t.tag] || t.tag}</span>
+        `;
+
+        row.querySelector("input").addEventListener("change", (e) => {
+          checks[t.id] = e.target.checked;
+          saveState(checks);
+          render();
+          toast(e.target.checked ? `تم تعليم ${t.id}` : `اتشال التعليم من ${t.id}`);
+        });
+
+        (t.side === "dash" ? dash : app).appendChild(row);
+      });
+
+      const total = TASKS.length;
+      document.getElementById("progressText").textContent = `${done} / ${total} منتهي`;
+      document.getElementById("progressBar").style.width = `${Math.round((done / total) * 100)}%`;
+
+      const dashDone = TASKS.filter(t => t.side === "dash" && checks[t.id]).length;
+      const dashTotal = TASKS.filter(t => t.side === "dash").length;
+      const appDone = TASKS.filter(t => t.side === "app" && checks[t.id]).length;
+      const appTotal = TASKS.filter(t => t.side === "app").length;
+      document.getElementById("dashCount").textContent = `${dashDone}/${dashTotal}`;
+      document.getElementById("appCount").textContent = `${appDone}/${appTotal}`;
+    }
+
+    document.querySelectorAll(".filters button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".filters button").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        filter = btn.dataset.filter;
+        render();
+      });
+    });
+
+    document.getElementById("exportBtn").addEventListener("click", () => {
+      const payload = {
+        updatedAt: new Date().toISOString(),
+        checks
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `talabatcom-board-${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast("اتعمل تصدير JSON");
+    });
+
+    document.getElementById("importBtn").addEventListener("click", () => {
+      document.getElementById("importFile").click();
+    });
+
+    document.getElementById("importFile").addEventListener("change", async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (!data.checks) throw new Error("invalid");
+        checks = { ...defaultMap(), ...data.checks };
+        saveState(checks);
+        render();
+        toast("تم الاستيراد");
+      } catch (_) {
+        toast("ملف غير صالح");
+      }
+      e.target.value = "";
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      if (!confirm("هترجع العلامات للوضع الافتراضي. متأكد؟")) return;
+      checks = defaultMap();
+      saveState(checks);
+      render();
+      toast("اتعمل إعادة ضبط");
+    });
+
+    render();
+  </script>
+</body>
+</html>
