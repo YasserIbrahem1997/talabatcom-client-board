@@ -19,6 +19,10 @@
       --hot-bg: #fee2e2;
       --accent: #dc2626;
       --ok: #16a34a;
+      --dash: #1d4ed8;
+      --dash-bg: #dbeafe;
+      --app: #7c2d12;
+      --app-bg: #ffedd5;
     }
     * { box-sizing: border-box; }
     body {
@@ -31,7 +35,7 @@
       color: var(--ink);
       line-height: 1.45;
     }
-    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 70px; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 24px 16px 70px; }
     header { margin-bottom: 16px; }
     h1 { margin: 0; font-size: 1.55rem; }
     .sub { color: var(--muted); margin-top: 6px; font-size: 0.92rem; }
@@ -40,56 +44,54 @@
       margin: 14px 0 18px; padding: 12px; background: var(--card);
       border: 1px solid var(--line); border-radius: 14px;
     }
-    .progress {
-      flex: 1; min-width: 180px; font-weight: 700; color: var(--accent);
-    }
+    .progress { flex: 1; min-width: 180px; font-weight: 700; color: var(--accent); }
     .bar {
       height: 8px; background: #e7e5e4; border-radius: 99px; overflow: hidden;
       margin-top: 6px; max-width: 280px;
     }
     .bar > span { display: block; height: 100%; background: var(--ok); width: 0%; transition: width .25s; }
-    button, .btn {
+    button {
       border: 1px solid var(--line); background: #fff; color: var(--ink);
       border-radius: 10px; padding: 8px 12px; font: inherit; cursor: pointer;
     }
-    button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
     button:hover { filter: brightness(0.97); }
     .filters { display: flex; flex-wrap: wrap; gap: 8px; }
     .filters button.active { border-color: var(--accent); color: var(--accent); font-weight: 700; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+    .stack { display: flex; flex-direction: column; gap: 16px; }
     section {
       background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden;
     }
+    section.new-section { border-color: #fdba74; box-shadow: 0 0 0 1px #ffedd5 inset; }
+    section.old-section { border-color: #d6d3d1; }
     section h2 {
-      margin: 0; padding: 12px 14px; font-size: 1.02rem; border-bottom: 1px solid var(--line);
+      margin: 0; padding: 12px 14px; font-size: 1.05rem; border-bottom: 1px solid var(--line);
       display: flex; justify-content: space-between; gap: 8px; align-items: center;
     }
-    .list { padding: 6px 0; max-height: 70vh; overflow: auto; }
-    .item {
-      display: grid; grid-template-columns: 28px 54px 1fr auto; gap: 8px;
-      align-items: start; padding: 10px 12px; border-bottom: 1px solid var(--line);
-    }
-    .item:last-child { border-bottom: 0; }
-    .item.done-row { background: #f0fdf4; }
-    .item.hidden { display: none; }
-    .item input { width: 18px; height: 18px; margin-top: 3px; accent-color: var(--ok); cursor: pointer; }
-    .id { font-weight: 800; color: var(--accent); }
+    section.new-section h2 { background: linear-gradient(180deg, #fff7ed, #fff); }
+    section.old-section h2 { background: linear-gradient(180deg, #fafaf9, #fff); }
+    .list { padding: 0; max-height: 62vh; overflow: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th, td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: right; vertical-align: top; }
+    th { position: sticky; top: 0; background: #fafaf9; color: var(--muted); font-weight: 600; z-index: 1; }
+    tr:last-child td { border-bottom: 0; }
+    tr.done-row { background: #f0fdf4; }
+    tr.hidden { display: none; }
+    td.check { width: 36px; }
+    td.id { width: 56px; font-weight: 800; color: var(--accent); white-space: nowrap; }
+    td.side { width: 88px; }
     .title { font-size: 0.9rem; }
     .note { color: var(--muted); font-size: 0.78rem; margin-top: 3px; }
-    .tag {
+    input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--ok); cursor: pointer; }
+    .tag, .side-tag {
       font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+      display: inline-block;
     }
     .tag.new { background: var(--new-bg); color: var(--new); }
     .tag.hot { background: var(--hot-bg); color: var(--hot); }
     .tag.done { background: var(--done-bg); color: var(--done); }
     .tag.todo { background: #f5f5f4; color: #57534e; }
-    .extra {
-      margin-top: 14px; padding: 14px; background: var(--card);
-      border: 1px solid var(--line); border-radius: 16px;
-    }
-    .extra h3 { margin: 0 0 8px; font-size: 1rem; }
-    .extra ul { margin: 0; padding-inline-start: 18px; }
+    .side-tag.dash { background: var(--dash-bg); color: var(--dash); }
+    .side-tag.app { background: var(--app-bg); color: var(--app); }
     footer { margin-top: 14px; color: var(--muted); font-size: 0.8rem; }
     .toast {
       position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
@@ -103,7 +105,7 @@
   <div class="wrap">
     <header>
       <h1>طلباتكم — متابعة التعديلات</h1>
-      <div class="sub">علّم ✓ على اللي خلص. التقدم بيتسجل على نفس الجهاز/المتصفح. تقدر تصدّر/تستورد نسخة للمتابعة المشتركة.</div>
+      <div class="sub">جدول للـ <strong>جديد</strong> وجدول للـ <strong>قديم</strong>. علّم ✓ على اللي خلص. تصدير/استيراد JSON للمشاركة.</div>
     </header>
 
     <div class="toolbar">
@@ -115,7 +117,6 @@
         <button type="button" data-filter="all" class="active">الكل</button>
         <button type="button" data-filter="open">المتبقي</button>
         <button type="button" data-filter="done">المنتهي</button>
-        <button type="button" data-filter="new">الجديد فقط</button>
       </div>
       <button type="button" id="exportBtn">تصدير JSON</button>
       <button type="button" id="importBtn">استيراد JSON</button>
@@ -123,28 +124,51 @@
       <button type="button" id="resetBtn">إعادة ضبط العلامات</button>
     </div>
 
-    <div class="grid">
-      <section>
-        <h2><span>الداش بورد</span><span id="dashCount" class="sub"></span></h2>
-        <div class="list" id="dashList"></div>
+    <div class="stack">
+      <section class="new-section">
+        <h2>
+          <span>🆕 الجديد</span>
+          <span id="newCount" class="sub"></span>
+        </h2>
+        <div class="list">
+          <table>
+            <thead>
+              <tr>
+                <th></th>
+                <th>#</th>
+                <th>النوع</th>
+                <th>التعديل</th>
+                <th>الوسم</th>
+              </tr>
+            </thead>
+            <tbody id="newBody"></tbody>
+          </table>
+        </div>
       </section>
-      <section>
-        <h2><span>الأبلكيشن</span><span id="appCount" class="sub"></span></h2>
-        <div class="list" id="appList"></div>
+
+      <section class="old-section">
+        <h2>
+          <span>📂 القديم / الجاري والمتنهّي</span>
+          <span id="oldCount" class="sub"></span>
+        </h2>
+        <div class="list">
+          <table>
+            <thead>
+              <tr>
+                <th></th>
+                <th>#</th>
+                <th>النوع</th>
+                <th>التعديل</th>
+                <th>الوسم</th>
+              </tr>
+            </thead>
+            <tbody id="oldBody"></tbody>
+          </table>
+        </div>
       </section>
     </div>
 
-    <div class="extra">
-      <h3>تحديثات تنفيذ أخيرة (نوفمبر 2026)</h3>
-      <ul>
-        <li>متعدد الاختيارات في البقالة + جمع أسعار الـ variations صح</li>
-        <li>سعر السلة يعرض الاختيارات + الإضافات</li>
-        <li>إصلاح «المتجر مغلق» الكاذب مع المواعيد الليلية (مثل 10→3)</li>
-        <li>APK عميل: 2026-11-09</li>
-      </ul>
-    </div>
-
-    <footer>طلباتكم · بورد متابعة العميل · التخزين المحلي: talabatcom-client-board-v1</footer>
+    <footer>طلباتكم · بورد متابعة العميل · https://yasseribrahem1997.github.io/talabatcom-client-board/</footer>
   </div>
   <div class="toast" id="toast"></div>
 
@@ -152,7 +176,6 @@
     const STORAGE_KEY = "talabatcom-client-board-v1";
 
     const TASKS = [
-      // Dashboard
       { id: "D1", side: "dash", title: "تطوير صفحة العملاء (فلاتر + دمج + إشعار شرائح + رسم بياني + ترتيب)", tag: "todo", note: "في الشيت: منتهى — راجع اللايف", defaultDone: false },
       { id: "D2", side: "dash", title: "تشغيل كل العناصر وتثبت حسب الاختيار", tag: "todo", defaultDone: false },
       { id: "D3", side: "dash", title: "تعديل صفحة الدخول/تسجيل (أرقام/إيميلات غير صحيحة)", tag: "todo", note: "في الشيت: منتهى", defaultDone: false },
@@ -179,7 +202,6 @@
       { id: "D24", side: "dash", title: "تحديد معاد الطلب واستقبال المسؤول (متعدد)", tag: "new", defaultDone: false },
       { id: "D25", side: "dash", title: "الأسعار لا تقبل الصفر والكسور (10.5→11)", tag: "todo", note: "في الشيت: منتهي", defaultDone: false },
 
-      // App
       { id: "A1", side: "app", title: "تعديل صفحة الدخول (هام جدا)", tag: "todo", defaultDone: false },
       { id: "A2", side: "app", title: "نقاط الولاء + وقت + الرئيسية", tag: "done", defaultDone: true },
       { id: "A3", side: "app", title: "تعديل الكاش باك", tag: "todo", defaultDone: false },
@@ -222,13 +244,15 @@
       { id: "A40", side: "app", title: "شكل رؤية الطلب في السلة", tag: "new", defaultDone: false },
       { id: "A41", side: "app", title: "صفحات: متاجر / مميزة / أماكن جديدة / عروض / الأكثر مبيعاً", tag: "new", defaultDone: false },
 
-      // Extra recent work as trackable rows
       { id: "X1", side: "app", title: "سعر السلة = اختيارات + إضافات (عرض واضح للعميل)", tag: "done", note: "مضاف نوفمبر 2026", defaultDone: true },
       { id: "X2", side: "app", title: "إصلاح «المتجر مغلق» مع مواعيد overnight", tag: "done", note: "مضاف نوفمبر 2026", defaultDone: true },
       { id: "X3", side: "app", title: "APK عميل 2026-11-09", tag: "done", defaultDone: true }
     ];
 
-    const TAG_LABEL = { done: "منتهى", new: "جديد", hot: "جديد هام", todo: "مفتوح" };
+    const TAG_LABEL = { done: "منتهى", new: "جديد", hot: "جديد هام", todo: "قديم/جاري" };
+    const SIDE_LABEL = { dash: "داشبورد", app: "أبلكيشن" };
+
+    function isNewTask(t) { return t.tag === "new" || t.tag === "hot"; }
 
     function loadState() {
       try {
@@ -269,61 +293,68 @@
       setTimeout(() => el.classList.remove("show"), 1800);
     }
 
+    function makeRow(t, isDone) {
+      const tr = document.createElement("tr");
+      if (isDone) tr.classList.add("done-row");
+      tr.dataset.id = t.id;
+
+      const show =
+        filter === "all" ||
+        (filter === "done" && isDone) ||
+        (filter === "open" && !isDone);
+      if (!show) tr.classList.add("hidden");
+
+      tr.innerHTML = `
+        <td class="check"><input type="checkbox" ${isDone ? "checked" : ""} aria-label="تم ${t.id}" /></td>
+        <td class="id">${t.id}</td>
+        <td class="side"><span class="side-tag ${t.side}">${SIDE_LABEL[t.side]}</span></td>
+        <td>
+          <div class="title">${t.title}</div>
+          ${t.note ? `<div class="note">${t.note}</div>` : ""}
+        </td>
+        <td><span class="tag ${t.tag}">${TAG_LABEL[t.tag] || t.tag}</span></td>
+      `;
+
+      tr.querySelector("input").addEventListener("change", (e) => {
+        checks[t.id] = e.target.checked;
+        saveState(checks);
+        render();
+        toast(e.target.checked ? `تم تعليم ${t.id}` : `اتشال التعليم من ${t.id}`);
+      });
+
+      return tr;
+    }
+
     function render() {
-      const dash = document.getElementById("dashList");
-      const app = document.getElementById("appList");
-      dash.innerHTML = "";
-      app.innerHTML = "";
+      const newBody = document.getElementById("newBody");
+      const oldBody = document.getElementById("oldBody");
+      newBody.innerHTML = "";
+      oldBody.innerHTML = "";
 
       let done = 0;
+      let newTotal = 0, newDone = 0, oldTotal = 0, oldDone = 0;
+
       TASKS.forEach(t => {
         const isDone = !!checks[t.id];
         if (isDone) done += 1;
+        const row = makeRow(t, isDone);
 
-        const row = document.createElement("div");
-        row.className = "item" + (isDone ? " done-row" : "");
-        row.dataset.id = t.id;
-        row.dataset.side = t.side;
-        row.dataset.tag = t.tag;
-        row.dataset.done = isDone ? "1" : "0";
-
-        const show =
-          filter === "all" ||
-          (filter === "done" && isDone) ||
-          (filter === "open" && !isDone) ||
-          (filter === "new" && (t.tag === "new" || t.tag === "hot"));
-        if (!show) row.classList.add("hidden");
-
-        row.innerHTML = `
-          <input type="checkbox" ${isDone ? "checked" : ""} aria-label="تم ${t.id}" />
-          <div class="id">${t.id}</div>
-          <div>
-            <div class="title">${t.title}</div>
-            ${t.note ? `<div class="note">${t.note}</div>` : ""}
-          </div>
-          <span class="tag ${t.tag}">${TAG_LABEL[t.tag] || t.tag}</span>
-        `;
-
-        row.querySelector("input").addEventListener("change", (e) => {
-          checks[t.id] = e.target.checked;
-          saveState(checks);
-          render();
-          toast(e.target.checked ? `تم تعليم ${t.id}` : `اتشال التعليم من ${t.id}`);
-        });
-
-        (t.side === "dash" ? dash : app).appendChild(row);
+        if (isNewTask(t)) {
+          newTotal += 1;
+          if (isDone) newDone += 1;
+          newBody.appendChild(row);
+        } else {
+          oldTotal += 1;
+          if (isDone) oldDone += 1;
+          oldBody.appendChild(row);
+        }
       });
 
       const total = TASKS.length;
       document.getElementById("progressText").textContent = `${done} / ${total} منتهي`;
       document.getElementById("progressBar").style.width = `${Math.round((done / total) * 100)}%`;
-
-      const dashDone = TASKS.filter(t => t.side === "dash" && checks[t.id]).length;
-      const dashTotal = TASKS.filter(t => t.side === "dash").length;
-      const appDone = TASKS.filter(t => t.side === "app" && checks[t.id]).length;
-      const appTotal = TASKS.filter(t => t.side === "app").length;
-      document.getElementById("dashCount").textContent = `${dashDone}/${dashTotal}`;
-      document.getElementById("appCount").textContent = `${appDone}/${appTotal}`;
+      document.getElementById("newCount").textContent = `${newDone}/${newTotal}`;
+      document.getElementById("oldCount").textContent = `${oldDone}/${oldTotal}`;
     }
 
     document.querySelectorAll(".filters button").forEach(btn => {
@@ -336,10 +367,7 @@
     });
 
     document.getElementById("exportBtn").addEventListener("click", () => {
-      const payload = {
-        updatedAt: new Date().toISOString(),
-        checks
-      };
+      const payload = { updatedAt: new Date().toISOString(), checks };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
