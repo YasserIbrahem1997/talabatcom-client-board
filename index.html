@@ -19,10 +19,6 @@
       --hot-bg: #fee2e2;
       --accent: #dc2626;
       --ok: #16a34a;
-      --dash: #1d4ed8;
-      --dash-bg: #dbeafe;
-      --app: #7c2d12;
-      --app-bg: #ffedd5;
     }
     * { box-sizing: border-box; }
     body {
@@ -57,19 +53,24 @@
     button:hover { filter: brightness(0.97); }
     .filters { display: flex; flex-wrap: wrap; gap: 8px; }
     .filters button.active { border-color: var(--accent); color: var(--accent); font-weight: 700; }
-    .stack { display: flex; flex-direction: column; gap: 16px; }
+    .group { margin-bottom: 22px; }
+    .group-title {
+      margin: 0 0 10px; font-size: 1.15rem; font-weight: 800;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .stack { display: flex; flex-direction: column; gap: 12px; }
     section {
       background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden;
     }
-    section.dash-section { border-color: #93c5fd; }
-    section.app-section { border-color: #fdba74; }
+    section.old-section { border-color: #d6d3d1; }
+    section.new-section { border-color: #fdba74; box-shadow: 0 0 0 1px #ffedd5 inset; }
     section h2 {
-      margin: 0; padding: 12px 14px; font-size: 1.05rem; border-bottom: 1px solid var(--line);
+      margin: 0; padding: 11px 14px; font-size: 1rem; border-bottom: 1px solid var(--line);
       display: flex; justify-content: space-between; gap: 8px; align-items: center;
     }
-    section.dash-section h2 { background: linear-gradient(180deg, #eff6ff, #fff); }
-    section.app-section h2 { background: linear-gradient(180deg, #fff7ed, #fff); }
-    .list { padding: 0; max-height: 62vh; overflow: auto; }
+    section.old-section h2 { background: linear-gradient(180deg, #fafaf9, #fff); }
+    section.new-section h2 { background: linear-gradient(180deg, #fff7ed, #fff); }
+    .list { padding: 0; max-height: 48vh; overflow: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
     th, td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: right; vertical-align: top; }
     th { position: sticky; top: 0; background: #fafaf9; color: var(--muted); font-weight: 600; z-index: 1; }
@@ -102,7 +103,7 @@
   <div class="wrap">
     <header>
       <h1>طلباتكم — متابعة التعديلات</h1>
-      <div class="sub">جدول <strong>داشبورد</strong> فوق، وجدول <strong>موبايل</strong> تحت (البنود الجديدة في آخر كل جدول). علّم ✓ على اللي خلص.</div>
+      <div class="sub">داشبورد وموبايل — كل واحد: جدول <strong>قديم</strong> فوق وجدول <strong>جديد</strong> تحت. علّم ✓ على اللي خلص.</div>
     </header>
 
     <div class="toolbar">
@@ -121,46 +122,72 @@
       <button type="button" id="resetBtn">إعادة ضبط العلامات</button>
     </div>
 
-    <div class="stack">
-      <section class="dash-section">
-        <h2>
-          <span>🖥️ الداشبورد</span>
-          <span id="dashCount" class="sub"></span>
-        </h2>
-        <div class="list">
-          <table>
-            <thead>
-              <tr>
-                <th></th>
-                <th>#</th>
-                <th>التعديل</th>
-                <th>الوسم</th>
-              </tr>
-            </thead>
-            <tbody id="dashBody"></tbody>
-          </table>
-        </div>
-      </section>
+    <div class="group">
+      <div class="group-title">🖥️ الداشبورد</div>
+      <div class="stack">
+        <section class="old-section">
+          <h2>
+            <span>📂 القديم / الجاري والمتنهّي</span>
+            <span id="dashOldCount" class="sub"></span>
+          </h2>
+          <div class="list">
+            <table>
+              <thead>
+                <tr><th></th><th>#</th><th>التعديل</th><th>الوسم</th></tr>
+              </thead>
+              <tbody id="dashOldBody"></tbody>
+            </table>
+          </div>
+        </section>
+        <section class="new-section">
+          <h2>
+            <span>🆕 الجديد</span>
+            <span id="dashNewCount" class="sub"></span>
+          </h2>
+          <div class="list">
+            <table>
+              <thead>
+                <tr><th></th><th>#</th><th>التعديل</th><th>الوسم</th></tr>
+              </thead>
+              <tbody id="dashNewBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
 
-      <section class="app-section">
-        <h2>
-          <span>📱 الموبايل / الأبلكيشن</span>
-          <span id="appCount" class="sub"></span>
-        </h2>
-        <div class="list">
-          <table>
-            <thead>
-              <tr>
-                <th></th>
-                <th>#</th>
-                <th>التعديل</th>
-                <th>الوسم</th>
-              </tr>
-            </thead>
-            <tbody id="appBody"></tbody>
-          </table>
-        </div>
-      </section>
+    <div class="group">
+      <div class="group-title">📱 الموبايل / الأبلكيشن</div>
+      <div class="stack">
+        <section class="old-section">
+          <h2>
+            <span>📂 القديم / الجاري والمتنهّي</span>
+            <span id="appOldCount" class="sub"></span>
+          </h2>
+          <div class="list">
+            <table>
+              <thead>
+                <tr><th></th><th>#</th><th>التعديل</th><th>الوسم</th></tr>
+              </thead>
+              <tbody id="appOldBody"></tbody>
+            </table>
+          </div>
+        </section>
+        <section class="new-section">
+          <h2>
+            <span>🆕 الجديد</span>
+            <span id="appNewCount" class="sub"></span>
+          </h2>
+          <div class="list">
+            <table>
+              <thead>
+                <tr><th></th><th>#</th><th>التعديل</th><th>الوسم</th></tr>
+              </thead>
+              <tbody id="appNewBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
     </div>
 
     <footer>طلباتكم · بورد متابعة العميل · https://yasseribrahem1997.github.io/talabatcom-client-board/</footer>
@@ -248,15 +275,6 @@
 
     function isNewTask(t) { return t.tag === "new" || t.tag === "hot"; }
 
-    function sortSide(tasks) {
-      return tasks.slice().sort((a, b) => {
-        const an = isNewTask(a) ? 1 : 0;
-        const bn = isNewTask(b) ? 1 : 0;
-        if (an !== bn) return an - bn;
-        return 0;
-      });
-    }
-
     function loadState() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
@@ -327,32 +345,35 @@
       return tr;
     }
 
-    function fillBody(bodyId, tasks) {
+    function fillBody(bodyId, countId, tasks) {
       const body = document.getElementById(bodyId);
       body.innerHTML = "";
       let total = 0, doneCount = 0;
-      sortSide(tasks).forEach(t => {
+      tasks.forEach(t => {
         const isDone = !!checks[t.id];
         total += 1;
         if (isDone) doneCount += 1;
         body.appendChild(makeRow(t, isDone));
       });
+      document.getElementById(countId).textContent = `${doneCount}/${total}`;
       return { total, doneCount };
     }
 
     function render() {
-      const dashTasks = TASKS.filter(t => t.side === "dash");
-      const appTasks = TASKS.filter(t => t.side === "app");
+      const dashOld = TASKS.filter(t => t.side === "dash" && !isNewTask(t));
+      const dashNew = TASKS.filter(t => t.side === "dash" && isNewTask(t));
+      const appOld = TASKS.filter(t => t.side === "app" && !isNewTask(t));
+      const appNew = TASKS.filter(t => t.side === "app" && isNewTask(t));
 
-      const dash = fillBody("dashBody", dashTasks);
-      const app = fillBody("appBody", appTasks);
+      fillBody("dashOldBody", "dashOldCount", dashOld);
+      fillBody("dashNewBody", "dashNewCount", dashNew);
+      fillBody("appOldBody", "appOldCount", appOld);
+      fillBody("appNewBody", "appNewCount", appNew);
 
       const done = Object.keys(checks).filter(k => checks[k]).length;
       const total = TASKS.length;
       document.getElementById("progressText").textContent = `${done} / ${total} منتهي`;
       document.getElementById("progressBar").style.width = `${Math.round((done / total) * 100)}%`;
-      document.getElementById("dashCount").textContent = `${dash.doneCount}/${dash.total}`;
-      document.getElementById("appCount").textContent = `${app.doneCount}/${app.total}`;
     }
 
     document.querySelectorAll(".filters button").forEach(btn => {
