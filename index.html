@@ -82,6 +82,8 @@
     .title { font-size: 0.9rem; }
     .note { color: var(--muted); font-size: 0.78rem; margin-top: 3px; }
     input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--ok); cursor: pointer; }
+    input[type="checkbox"]:disabled { cursor: not-allowed; opacity: 0.85; }
+    body.view-only input[type="checkbox"] { pointer-events: none; }
     .tag {
       font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap;
       display: inline-block;
@@ -90,6 +92,14 @@
     .tag.hot { background: var(--hot-bg); color: var(--hot); }
     .tag.done { background: var(--done-bg); color: var(--done); }
     .tag.todo { background: #f5f5f4; color: #57534e; }
+    .mode-pill {
+      font-size: 0.78rem; font-weight: 700; padding: 6px 10px; border-radius: 999px;
+      background: #f5f5f4; color: #57534e; border: 1px solid var(--line);
+    }
+    .mode-pill.edit { background: #dcfce7; color: #166534; border-color: #86efac; }
+    .edit-only { display: none; }
+    body.can-edit .edit-only { display: inline-flex; }
+    body.can-edit #unlockBtn { display: none; }
     footer { margin-top: 14px; color: var(--muted); font-size: 0.8rem; }
     .toast {
       position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
@@ -103,7 +113,7 @@
   <div class="wrap">
     <header>
       <h1>طلباتكم — متابعة التعديلات</h1>
-      <div class="sub">داشبورد وموبايل — كل واحد: جدول <strong>قديم</strong> فوق وجدول <strong>جديد</strong> تحت. علّم ✓ على اللي خلص.</div>
+      <div class="sub">عرض عام للجميع. التعديل للمالك فقط بعد فتح القفل. داشبورد/موبايل — قديم فوق وجديد تحت.</div>
     </header>
 
     <div class="toolbar">
@@ -111,15 +121,19 @@
         <div id="progressText">0 / 0 منتهي</div>
         <div class="bar"><span id="progressBar"></span></div>
       </div>
+      <span id="modePill" class="mode-pill">👁 عرض فقط</span>
       <div class="filters">
         <button type="button" data-filter="all" class="active">الكل</button>
         <button type="button" data-filter="open">المتبقي</button>
         <button type="button" data-filter="done">المنتهي</button>
       </div>
-      <button type="button" id="exportBtn">تصدير JSON</button>
-      <button type="button" id="importBtn">استيراد JSON</button>
+      <button type="button" id="unlockBtn">🔓 فتح التعديل</button>
+      <button type="button" id="lockBtn" class="edit-only">🔒 قفل</button>
+      <button type="button" id="publishBtn" class="edit-only">نشر للعرض العام</button>
+      <button type="button" id="exportBtn" class="edit-only">تصدير JSON</button>
+      <button type="button" id="importBtn" class="edit-only">استيراد JSON</button>
       <input type="file" id="importFile" accept="application/json,.json" hidden />
-      <button type="button" id="resetBtn">إعادة ضبط العلامات</button>
+      <button type="button" id="resetBtn" class="edit-only">إعادة ضبط</button>
     </div>
 
     <div class="group">
@@ -195,9 +209,12 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    const STORAGE_KEY = "talabatcom-client-board-v2";
-    const LEGACY_STORAGE_KEY = "talabatcom-client-board-v1";
-    // Client confirmed done 2026-11-12 — force even if old localStorage had them unchecked
+    // Shared published state (everyone sees this). Edit unlock is PIN-gated.
+    const STATE_URL = "board-state.json";
+    const DRAFT_KEY = "talabatcom-client-board-draft-v3";
+    const EDIT_SESSION_KEY = "talabatcom-board-edit-ok";
+    // SHA-256 of owner PIN (not plaintext). Casual visitors cannot toggle.
+    const EDIT_PIN_SHA256 = "031d36fd9d7dfe15d9767de4154ee752d87c12c5449289744a8f66dccf78c22c";
     const FORCE_DONE = [
       "D3", "D7", "D8", "D15", "D16", "D21", "D22",
       "A2", "A3", "A4", "A7", "A15", "A21", "A23", "A26", "A34", "A35",
@@ -282,21 +299,6 @@
 
     function isNewTask(t) { return t.tag === "new" || t.tag === "hot"; }
 
-    function loadState() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
-        if (!raw) return null;
-        return JSON.parse(raw);
-      } catch (_) { return null; }
-    }
-
-    function saveState(map) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        updatedAt: new Date().toISOString(),
-        checks: map
-      }));
-    }
-
     function defaultMap() {
       const map = {};
       TASKS.forEach(t => { map[t.id] = !!t.defaultDone; });
@@ -304,24 +306,62 @@
       return map;
     }
 
-    let checks = (() => {
-      const saved = loadState();
+    function mergeChecks(incoming) {
       const base = defaultMap();
-      if (saved && saved.checks) {
-        Object.keys(saved.checks).forEach(k => { base[k] = !!saved.checks[k]; });
+      if (incoming && typeof incoming === "object") {
+        Object.keys(incoming).forEach(k => { base[k] = !!incoming[k]; });
       }
       FORCE_DONE.forEach(id => { base[id] = true; });
-      saveState(base);
       return base;
-    })();
+    }
 
+    let checks = defaultMap();
+    let publishedChecks = defaultMap();
+    let canEdit = sessionStorage.getItem(EDIT_SESSION_KEY) === "1";
     let filter = "all";
 
     function toast(msg) {
       const el = document.getElementById("toast");
       el.textContent = msg;
       el.classList.add("show");
-      setTimeout(() => el.classList.remove("show"), 1800);
+      setTimeout(() => el.classList.remove("show"), 2200);
+    }
+
+    function saveDraft() {
+      if (!canEdit) return;
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        updatedAt: new Date().toISOString(),
+        checks
+      }));
+    }
+
+    function applyModeUi() {
+      document.body.classList.toggle("can-edit", canEdit);
+      document.body.classList.toggle("view-only", !canEdit);
+      const pill = document.getElementById("modePill");
+      if (canEdit) {
+        pill.textContent = "✏️ وضع التعديل";
+        pill.classList.add("edit");
+      } else {
+        pill.textContent = "👁 عرض فقط";
+        pill.classList.remove("edit");
+      }
+    }
+
+    async function sha256Hex(text) {
+      const data = new TextEncoder().encode(text);
+      const buf = await crypto.subtle.digest("SHA-256", data);
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    function downloadState(filename) {
+      const payload = { updatedAt: new Date().toISOString(), checks };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
     }
 
     function makeRow(t, isDone) {
@@ -336,7 +376,7 @@
       if (!show) tr.classList.add("hidden");
 
       tr.innerHTML = `
-        <td class="check"><input type="checkbox" ${isDone ? "checked" : ""} aria-label="تم ${t.id}" /></td>
+        <td class="check"><input type="checkbox" ${isDone ? "checked" : ""} ${canEdit ? "" : "disabled"} aria-label="تم ${t.id}" /></td>
         <td class="id">${t.id}</td>
         <td>
           <div class="title">${t.title}</div>
@@ -345,12 +385,15 @@
         <td><span class="tag ${t.tag}">${TAG_LABEL[t.tag] || t.tag}</span></td>
       `;
 
-      tr.querySelector("input").addEventListener("change", (e) => {
-        checks[t.id] = e.target.checked;
-        saveState(checks);
-        render();
-        toast(e.target.checked ? `تم تعليم ${t.id}` : `اتشال التعليم من ${t.id}`);
-      });
+      const input = tr.querySelector("input");
+      if (canEdit) {
+        input.addEventListener("change", (e) => {
+          checks[t.id] = e.target.checked;
+          saveDraft();
+          render();
+          toast(e.target.checked ? `تم تعليم ${t.id}` : `اتشال التعليم من ${t.id}`);
+        });
+      }
 
       return tr;
     }
@@ -370,6 +413,7 @@
     }
 
     function render() {
+      applyModeUi();
       const dashOld = TASKS.filter(t => t.side === "dash" && !isNewTask(t));
       const dashNew = TASKS.filter(t => t.side === "dash" && isNewTask(t));
       const appOld = TASKS.filter(t => t.side === "app" && !isNewTask(t));
@@ -386,6 +430,29 @@
       document.getElementById("progressBar").style.width = `${Math.round((done / total) * 100)}%`;
     }
 
+    async function loadPublishedState() {
+      try {
+        const res = await fetch(STATE_URL + "?t=" + Date.now(), { cache: "no-store" });
+        if (!res.ok) throw new Error("fetch failed");
+        const data = await res.json();
+        publishedChecks = mergeChecks(data.checks);
+      } catch (_) {
+        publishedChecks = defaultMap();
+      }
+
+      if (canEdit) {
+        try {
+          const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+          checks = draft && draft.checks ? mergeChecks(draft.checks) : { ...publishedChecks };
+        } catch (_) {
+          checks = { ...publishedChecks };
+        }
+      } else {
+        checks = { ...publishedChecks };
+      }
+      render();
+    }
+
     document.querySelectorAll(".filters button").forEach(btn => {
       btn.addEventListener("click", () => {
         document.querySelectorAll(".filters button").forEach(b => b.classList.remove("active"));
@@ -395,32 +462,63 @@
       });
     });
 
+    document.getElementById("unlockBtn").addEventListener("click", async () => {
+      const pin = prompt("اكتب رمز التعديل:");
+      if (pin == null) return;
+      const hash = await sha256Hex(pin.trim());
+      if (hash !== EDIT_PIN_SHA256) {
+        toast("رمز غلط");
+        return;
+      }
+      canEdit = true;
+      sessionStorage.setItem(EDIT_SESSION_KEY, "1");
+      try {
+        const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+        checks = draft && draft.checks ? mergeChecks(draft.checks) : { ...publishedChecks };
+      } catch (_) {
+        checks = { ...publishedChecks };
+      }
+      render();
+      toast("تم فتح التعديل");
+    });
+
+    document.getElementById("lockBtn").addEventListener("click", () => {
+      canEdit = false;
+      sessionStorage.removeItem(EDIT_SESSION_KEY);
+      checks = { ...publishedChecks };
+      render();
+      toast("اتقفل التعديل — رجوع للعرض العام");
+    });
+
+    document.getElementById("publishBtn").addEventListener("click", () => {
+      if (!canEdit) return;
+      downloadState("board-state.json");
+      toast("نزل board-state.json — ابعت لـ Cursor ينشره عشان الكل يشوفه");
+    });
+
     document.getElementById("exportBtn").addEventListener("click", () => {
-      const payload = { updatedAt: new Date().toISOString(), checks };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `talabatcom-board-${new Date().toISOString().slice(0,10)}.json`;
-      a.click();
-      URL.revokeObjectURL(a.href);
+      if (!canEdit) return;
+      downloadState(`talabatcom-board-${new Date().toISOString().slice(0,10)}.json`);
       toast("اتعمل تصدير JSON");
     });
 
     document.getElementById("importBtn").addEventListener("click", () => {
+      if (!canEdit) return;
       document.getElementById("importFile").click();
     });
 
     document.getElementById("importFile").addEventListener("change", async (e) => {
+      if (!canEdit) return;
       const file = e.target.files && e.target.files[0];
       if (!file) return;
       try {
         const text = await file.text();
         const data = JSON.parse(text);
         if (!data.checks) throw new Error("invalid");
-        checks = { ...defaultMap(), ...data.checks };
-        saveState(checks);
+        checks = mergeChecks(data.checks);
+        saveDraft();
         render();
-        toast("تم الاستيراد");
+        toast("تم الاستيراد (مسودة)");
       } catch (_) {
         toast("ملف غير صالح");
       }
@@ -428,14 +526,15 @@
     });
 
     document.getElementById("resetBtn").addEventListener("click", () => {
+      if (!canEdit) return;
       if (!confirm("هترجع العلامات للوضع الافتراضي. متأكد؟")) return;
       checks = defaultMap();
-      saveState(checks);
+      saveDraft();
       render();
-      toast("اتعمل إعادة ضبط");
+      toast("اتعمل إعادة ضبط (مسودة)");
     });
 
-    render();
+    loadPublishedState();
   </script>
 </body>
 </html>
