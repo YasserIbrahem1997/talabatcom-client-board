@@ -99,7 +99,9 @@
     .mode-pill.edit { background: #dcfce7; color: #166534; border-color: #86efac; }
     .edit-only { display: none; }
     body.can-edit .edit-only { display: inline-flex; }
-    body.can-edit #unlockBtn { display: none; }
+    body.can-edit #unlockBtn,
+    body.can-edit #claimOwnerBtn { display: none; }
+    body.owner-known #claimOwnerBtn { display: none; }
     footer { margin-top: 14px; color: var(--muted); font-size: 0.8rem; }
     .toast {
       position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
@@ -113,7 +115,7 @@
   <div class="wrap">
     <header>
       <h1>طلباتكم — متابعة التعديلات</h1>
-      <div class="sub">عرض عام للجميع. التعديل للمالك فقط بعد فتح القفل. داشبورد/موبايل — قديم فوق وجديد تحت.</div>
+      <div class="sub">عرض للجميع. مالك الريبو على GitHub يفتح التعديل تلقائي على جهازه بعد تأكيد مرة واحدة. الغريب محتاج باسورد.</div>
     </header>
 
     <div class="toolbar">
@@ -127,8 +129,10 @@
         <button type="button" data-filter="open">المتبقي</button>
         <button type="button" data-filter="done">المنتهي</button>
       </div>
-      <button type="button" id="unlockBtn">🔓 فتح التعديل</button>
+      <button type="button" id="claimOwnerBtn">تأكيد ملكية الريبو (مرة واحدة)</button>
+      <button type="button" id="unlockBtn">🔓 فتح بباسورد</button>
       <button type="button" id="lockBtn" class="edit-only">🔒 قفل</button>
+      <button type="button" id="forgetOwnerBtn" class="edit-only">نسيان هذا الجهاز</button>
       <button type="button" id="publishBtn" class="edit-only">نشر للعرض العام</button>
       <button type="button" id="exportBtn" class="edit-only">تصدير JSON</button>
       <button type="button" id="importBtn" class="edit-only">استيراد JSON</button>
@@ -209,12 +213,15 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    // Shared published state (everyone sees this). Edit unlock is PIN-gated.
+    // Shared published state. Owner = GitHub repo owner (remembered device). Strangers = password.
     const STATE_URL = "board-state.json";
     const DRAFT_KEY = "talabatcom-client-board-draft-v3";
     const EDIT_SESSION_KEY = "talabatcom-board-edit-ok";
-    // SHA-256 of owner PIN (not plaintext). Casual visitors cannot toggle.
-    const EDIT_PIN_SHA256 = "031d36fd9d7dfe15d9767de4154ee752d87c12c5449289744a8f66dccf78c22c";
+    const OWNER_STORE_KEY = "talabatcom-board-github-owner-v1";
+    const OWNER_LOGIN = "YasserIbrahem1997";
+    const OWNER_REPO = "YasserIbrahem1997/talabatcom-client-board";
+    // Stranger fallback password hash (BoardGuest!15) — not the old TalabatBoard@Yasser
+    const GUEST_PIN_SHA256 = "06e3085cb1caea33d0a36b1bb7fae675feb48d58a146c2f9b8a3573b61d9b5cf";
     const FORCE_DONE = [
       "D3", "D7", "D8", "D15", "D16", "D21", "D22",
       "A2", "A3", "A4", "A7", "A15", "A21", "A23", "A26", "A34", "A35",
@@ -317,14 +324,29 @@
 
     let checks = defaultMap();
     let publishedChecks = defaultMap();
-    let canEdit = sessionStorage.getItem(EDIT_SESSION_KEY) === "1";
     let filter = "all";
+
+    function readOwnerStore() {
+      try {
+        const raw = localStorage.getItem(OWNER_STORE_KEY);
+        if (!raw) return null;
+        const data = JSON.parse(raw);
+        if (data && data.login === OWNER_LOGIN) return data;
+      } catch (_) {}
+      return null;
+    }
+
+    function isRememberedOwner() {
+      return !!readOwnerStore();
+    }
+
+    let canEdit = sessionStorage.getItem(EDIT_SESSION_KEY) === "1" || isRememberedOwner();
 
     function toast(msg) {
       const el = document.getElementById("toast");
       el.textContent = msg;
       el.classList.add("show");
-      setTimeout(() => el.classList.remove("show"), 2200);
+      setTimeout(() => el.classList.remove("show"), 2600);
     }
 
     function saveDraft() {
@@ -335,12 +357,26 @@
       }));
     }
 
+    function enableEdit(source) {
+      canEdit = true;
+      sessionStorage.setItem(EDIT_SESSION_KEY, "1");
+      try {
+        const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+        checks = draft && draft.checks ? mergeChecks(draft.checks) : { ...publishedChecks };
+      } catch (_) {
+        checks = { ...publishedChecks };
+      }
+      render();
+      toast(source === "owner" ? "تم فتح التعديل كمالك الريبو" : "تم فتح التعديل");
+    }
+
     function applyModeUi() {
       document.body.classList.toggle("can-edit", canEdit);
       document.body.classList.toggle("view-only", !canEdit);
+      document.body.classList.toggle("owner-known", isRememberedOwner());
       const pill = document.getElementById("modePill");
       if (canEdit) {
-        pill.textContent = "✏️ وضع التعديل";
+        pill.textContent = isRememberedOwner() ? "✏️ مالك الريبو" : "✏️ وضع التعديل";
         pill.classList.add("edit");
       } else {
         pill.textContent = "👁 عرض فقط";
@@ -352,6 +388,31 @@
       const data = new TextEncoder().encode(text);
       const buf = await crypto.subtle.digest("SHA-256", data);
       return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    async function verifyGithubRepoOwner(token) {
+      const headers = {
+        Authorization: "Bearer " + token,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28"
+      };
+      const userRes = await fetch("https://api.github.com/user", { headers });
+      if (!userRes.ok) throw new Error("token");
+      const user = await userRes.json();
+      if (user.login !== OWNER_LOGIN) throw new Error("not-owner");
+
+      const repoRes = await fetch("https://api.github.com/repos/" + OWNER_REPO, { headers });
+      if (!repoRes.ok) throw new Error("repo");
+      const repo = await repoRes.json();
+      const perms = repo.permissions || {};
+      const isOwnerAccount = repo.owner && repo.owner.login === OWNER_LOGIN;
+      if (!(isOwnerAccount || perms.admin || perms.push)) throw new Error("no-access");
+
+      localStorage.setItem(OWNER_STORE_KEY, JSON.stringify({
+        login: user.login,
+        verifiedAt: new Date().toISOString()
+      }));
+      return user.login;
     }
 
     function downloadState(filename) {
@@ -462,24 +523,42 @@
       });
     });
 
-    document.getElementById("unlockBtn").addEventListener("click", async () => {
-      const pin = prompt("اكتب رمز التعديل:");
-      if (pin == null) return;
-      const hash = await sha256Hex(pin.trim());
-      if (hash !== EDIT_PIN_SHA256) {
-        toast("رمز غلط");
+    document.getElementById("claimOwnerBtn").addEventListener("click", async () => {
+      const token = prompt(
+        "الصق GitHub Personal Access Token مرة واحدة (classic: read:user).\n" +
+        "مش هنخزن التوكن — بس نأكد إنك " + OWNER_LOGIN + " صاحب الريبو."
+      );
+      if (token == null) return;
+      const trimmed = token.trim();
+      if (!trimmed) {
+        toast("مفيش توكن");
         return;
       }
-      canEdit = true;
-      sessionStorage.setItem(EDIT_SESSION_KEY, "1");
       try {
-        const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
-        checks = draft && draft.checks ? mergeChecks(draft.checks) : { ...publishedChecks };
-      } catch (_) {
-        checks = { ...publishedChecks };
+        toast("جاري التحقق من GitHub…");
+        await verifyGithubRepoOwner(trimmed);
+        enableEdit("owner");
+      } catch (err) {
+        const code = String(err && err.message || err);
+        if (code === "not-owner") toast("الحساب مش مالك الريبو");
+        else if (code === "token") toast("التوكن غلط أو منتهي");
+        else toast("فشل التحقق من GitHub");
       }
-      render();
-      toast("تم فتح التعديل");
+    });
+
+    document.getElementById("unlockBtn").addEventListener("click", async () => {
+      if (isRememberedOwner()) {
+        enableEdit("owner");
+        return;
+      }
+      const pin = prompt("اكتب باسورد التعديل:");
+      if (pin == null) return;
+      const hash = await sha256Hex(pin.trim());
+      if (hash !== GUEST_PIN_SHA256) {
+        toast("باسورد غلط");
+        return;
+      }
+      enableEdit("guest");
     });
 
     document.getElementById("lockBtn").addEventListener("click", () => {
@@ -487,7 +566,19 @@
       sessionStorage.removeItem(EDIT_SESSION_KEY);
       checks = { ...publishedChecks };
       render();
-      toast("اتقفل التعديل — رجوع للعرض العام");
+      toast(isRememberedOwner()
+        ? "اتقفل لهذه الجلسة — هيرجع تلقائي لو فتحت تاني على نفس المتصفح"
+        : "اتقفل التعديل — رجوع للعرض العام");
+    });
+
+    document.getElementById("forgetOwnerBtn").addEventListener("click", () => {
+      if (!confirm("نمسح تذكير ملكية الريبو من المتصفح ده؟")) return;
+      localStorage.removeItem(OWNER_STORE_KEY);
+      canEdit = false;
+      sessionStorage.removeItem(EDIT_SESSION_KEY);
+      checks = { ...publishedChecks };
+      render();
+      toast("اتشال تذكير المالك من الجهاز");
     });
 
     document.getElementById("publishBtn").addEventListener("click", () => {
