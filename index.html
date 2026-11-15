@@ -109,13 +109,35 @@
       font-size: 0.85rem; opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 20;
     }
     .toast.show { opacity: 1; }
+    .row-actions { display: none; gap: 6px; margin-top: 6px; }
+    body.can-edit .row-actions { display: flex; flex-wrap: wrap; }
+    .row-actions button { padding: 4px 8px; font-size: 0.75rem; }
+    .modal-backdrop {
+      position: fixed; inset: 0; background: #1c191799; display: none;
+      align-items: center; justify-content: center; z-index: 40; padding: 16px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      width: min(520px, 100%); background: var(--card); border-radius: 16px;
+      border: 1px solid var(--line); padding: 16px; max-height: 90vh; overflow: auto;
+    }
+    .modal h3 { margin: 0 0 12px; font-size: 1.05rem; }
+    .form-grid { display: grid; gap: 10px; }
+    .form-grid label { display: grid; gap: 4px; font-size: 0.85rem; color: var(--muted); }
+    .form-grid input, .form-grid select, .form-grid textarea {
+      font: inherit; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); color: var(--ink);
+    }
+    .form-grid textarea { min-height: 70px; resize: vertical; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }
+    .modal-actions .danger { color: #991b1b; border-color: #fecaca; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
       <h1>طلباتكم — متابعة التعديلات</h1>
-      <div class="sub">عرض للجميع. مالك الريبو على GitHub يفتح التعديل تلقائي على جهازه بعد تأكيد مرة واحدة. الغريب محتاج باسورد.</div>
+      <div class="sub">عرض للجميع. في وضع التعديل تقدر تضيف/تعدّل بند وتختار داشبورد أو موبايل، وقديم أو جديد.</div>
     </header>
 
     <div class="toolbar">
@@ -133,11 +155,12 @@
       <button type="button" id="unlockBtn">🔓 فتح بباسورد</button>
       <button type="button" id="lockBtn" class="edit-only">🔒 قفل</button>
       <button type="button" id="forgetOwnerBtn" class="edit-only">نسيان هذا الجهاز</button>
+      <button type="button" id="addTaskBtn" class="edit-only">➕ إضافة بند</button>
       <button type="button" id="publishBtn" class="edit-only">نشر للعرض العام</button>
       <button type="button" id="exportBtn" class="edit-only">تصدير JSON</button>
       <button type="button" id="importBtn" class="edit-only">استيراد JSON</button>
       <input type="file" id="importFile" accept="application/json,.json" hidden />
-      <button type="button" id="resetBtn" class="edit-only">إعادة ضبط</button>
+      <button type="button" id="resetBtn" class="edit-only">إعادة ضبط العلامات</button>
     </div>
 
     <div class="group">
@@ -210,12 +233,61 @@
 
     <footer>طلباتكم · بورد متابعة العميل · https://yasseribrahem1997.github.io/talabatcom-client-board/</footer>
   </div>
+
+  <div class="modal-backdrop" id="taskModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-labelledby="taskModalTitle">
+      <h3 id="taskModalTitle">إضافة بند</h3>
+      <form id="taskForm" class="form-grid">
+        <input type="hidden" id="taskEditMode" value="add" />
+        <input type="hidden" id="taskOriginalId" value="" />
+        <div class="form-row">
+          <label>الرقم / ID
+            <input id="taskId" required placeholder="مثال: D26 أو A42" />
+          </label>
+          <label>القسم
+            <select id="taskSide" required>
+              <option value="dash">داشبورد</option>
+              <option value="app">موبايل / أبلكيشن</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-row">
+          <label>النوع
+            <select id="taskTag" required>
+              <option value="todo">قديم / جاري</option>
+              <option value="new">جديد</option>
+              <option value="hot">جديد هام</option>
+              <option value="done">منتهى</option>
+            </select>
+          </label>
+          <label>حالة البداية
+            <select id="taskDefaultDone">
+              <option value="false">مش منتهّي</option>
+              <option value="true">منتهّي ✓</option>
+            </select>
+          </label>
+        </div>
+        <label>عنوان التعديل
+          <input id="taskTitle" required placeholder="اكتب وصف البند" />
+        </label>
+        <label>ملاحظة (اختياري)
+          <textarea id="taskNote" placeholder="تفاصيل إضافية"></textarea>
+        </label>
+        <div class="modal-actions">
+          <button type="button" id="taskDeleteBtn" class="danger" hidden>حذف</button>
+          <button type="button" id="taskCancelBtn">إلغاء</button>
+          <button type="submit">حفظ</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <script>
     // Shared published state. Owner = GitHub repo owner (remembered device). Strangers = password.
     const STATE_URL = "board-state.json";
-    const DRAFT_KEY = "talabatcom-client-board-draft-v3";
+    const DRAFT_KEY = "talabatcom-client-board-draft-v4";
     const EDIT_SESSION_KEY = "talabatcom-board-edit-ok";
     const OWNER_STORE_KEY = "talabatcom-board-github-owner-v1";
     const OWNER_LOGIN = "YasserIbrahem1997";
@@ -228,7 +300,7 @@
       "X1", "X2", "X3"
     ];
 
-    const TASKS = [
+    const DEFAULT_TASKS = [
       { id: "D1", side: "dash", title: "تطوير صفحة العملاء (فلاتر + دمج + إشعار شرائح + رسم بياني + ترتيب)", tag: "todo", note: "في الشيت: منتهى — راجع اللايف", defaultDone: false },
       { id: "D2", side: "dash", title: "تشغيل كل العناصر وتثبت حسب الاختيار", tag: "todo", defaultDone: false },
       { id: "D3", side: "dash", title: "تعديل صفحة الدخول/تسجيل (أرقام/إيميلات غير صحيحة)", tag: "done", note: "خلّص — تأكيد العميل 2026-11-12", defaultDone: true },
@@ -304,17 +376,31 @@
 
     const TAG_LABEL = { done: "منتهى", new: "جديد", hot: "جديد هام", todo: "قديم/جاري" };
 
+    function cloneTasks(list) {
+      return (list || []).map(t => ({
+        id: String(t.id || "").trim(),
+        side: t.side === "app" ? "app" : "dash",
+        title: String(t.title || "").trim(),
+        tag: ["new", "hot", "done", "todo"].includes(t.tag) ? t.tag : "todo",
+        note: t.note ? String(t.note) : "",
+        defaultDone: !!t.defaultDone
+      })).filter(t => t.id && t.title);
+    }
+
+    let tasks = cloneTasks(DEFAULT_TASKS);
+    let publishedTasks = cloneTasks(DEFAULT_TASKS);
+
     function isNewTask(t) { return t.tag === "new" || t.tag === "hot"; }
 
-    function defaultMap() {
+    function defaultMap(list) {
       const map = {};
-      TASKS.forEach(t => { map[t.id] = !!t.defaultDone; });
+      (list || tasks).forEach(t => { map[t.id] = !!t.defaultDone; });
       FORCE_DONE.forEach(id => { map[id] = true; });
       return map;
     }
 
-    function mergeChecks(incoming) {
-      const base = defaultMap();
+    function mergeChecks(incoming, list) {
+      const base = defaultMap(list || tasks);
       if (incoming && typeof incoming === "object") {
         Object.keys(incoming).forEach(k => { base[k] = !!incoming[k]; });
       }
@@ -325,6 +411,7 @@
     let checks = defaultMap();
     let publishedChecks = defaultMap();
     let filter = "all";
+    let editingTaskId = null;
 
     function readOwnerStore() {
       try {
@@ -353,19 +440,30 @@
       if (!canEdit) return;
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
         updatedAt: new Date().toISOString(),
-        checks
+        checks,
+        tasks
       }));
+    }
+
+    function loadDraftIntoEditor() {
+      try {
+        const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+        if (draft && Array.isArray(draft.tasks) && draft.tasks.length) {
+          tasks = cloneTasks(draft.tasks);
+        } else {
+          tasks = cloneTasks(publishedTasks);
+        }
+        checks = draft && draft.checks ? mergeChecks(draft.checks, tasks) : mergeChecks(publishedChecks, tasks);
+      } catch (_) {
+        tasks = cloneTasks(publishedTasks);
+        checks = mergeChecks(publishedChecks, tasks);
+      }
     }
 
     function enableEdit(source) {
       canEdit = true;
       sessionStorage.setItem(EDIT_SESSION_KEY, "1");
-      try {
-        const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
-        checks = draft && draft.checks ? mergeChecks(draft.checks) : { ...publishedChecks };
-      } catch (_) {
-        checks = { ...publishedChecks };
-      }
+      loadDraftIntoEditor();
       render();
       toast(source === "owner" ? "تم فتح التعديل كمالك الريبو" : "تم فتح التعديل");
     }
@@ -415,14 +513,62 @@
       return user.login;
     }
 
+    function buildPayload() {
+      return {
+        updatedAt: new Date().toISOString(),
+        checks,
+        tasks: cloneTasks(tasks)
+      };
+    }
+
     function downloadState(filename) {
-      const payload = { updatedAt: new Date().toISOString(), checks };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const blob = new Blob([JSON.stringify(buildPayload(), null, 2)], { type: "application/json" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = filename;
       a.click();
       URL.revokeObjectURL(a.href);
+    }
+
+    function suggestNextId(side) {
+      const prefix = side === "app" ? "A" : "D";
+      let max = 0;
+      tasks.forEach(t => {
+        if (!t.id.startsWith(prefix)) return;
+        const n = parseInt(t.id.slice(prefix.length), 10);
+        if (!Number.isNaN(n) && n > max) max = n;
+      });
+      return prefix + (max + 1);
+    }
+
+    function openTaskModal(task) {
+      const modal = document.getElementById("taskModal");
+      const isEdit = !!task;
+      editingTaskId = isEdit ? task.id : null;
+      document.getElementById("taskModalTitle").textContent = isEdit ? "تعديل بند" : "إضافة بند";
+      document.getElementById("taskEditMode").value = isEdit ? "edit" : "add";
+      document.getElementById("taskOriginalId").value = isEdit ? task.id : "";
+      document.getElementById("taskId").value = isEdit ? task.id : suggestNextId("dash");
+      document.getElementById("taskId").readOnly = false;
+      document.getElementById("taskSide").value = isEdit ? task.side : "dash";
+      document.getElementById("taskTag").value = isEdit ? task.tag : "new";
+      document.getElementById("taskDefaultDone").value = isEdit
+        ? (checks[task.id] || task.defaultDone ? "true" : "false")
+        : "false";
+      document.getElementById("taskTitle").value = isEdit ? task.title : "";
+      document.getElementById("taskNote").value = isEdit && task.note ? task.note : "";
+      document.getElementById("taskDeleteBtn").hidden = !isEdit;
+      modal.classList.add("open");
+      modal.setAttribute("aria-hidden", "false");
+      document.getElementById("taskTitle").focus();
+    }
+
+    function closeTaskModal() {
+      const modal = document.getElementById("taskModal");
+      modal.classList.remove("open");
+      modal.setAttribute("aria-hidden", "true");
+      editingTaskId = null;
+      document.getElementById("taskForm").reset();
     }
 
     function makeRow(t, isDone) {
@@ -442,6 +588,10 @@
         <td>
           <div class="title">${t.title}</div>
           ${t.note ? `<div class="note">${t.note}</div>` : ""}
+          <div class="row-actions">
+            <button type="button" data-act="edit">تعديل</button>
+            <button type="button" data-act="delete">حذف</button>
+          </div>
         </td>
         <td><span class="tag ${t.tag}">${TAG_LABEL[t.tag] || t.tag}</span></td>
       `;
@@ -450,20 +600,31 @@
       if (canEdit) {
         input.addEventListener("change", (e) => {
           checks[t.id] = e.target.checked;
+          const item = tasks.find(x => x.id === t.id);
+          if (item) item.defaultDone = e.target.checked;
           saveDraft();
           render();
           toast(e.target.checked ? `تم تعليم ${t.id}` : `اتشال التعليم من ${t.id}`);
+        });
+        tr.querySelector('[data-act="edit"]').addEventListener("click", () => openTaskModal(t));
+        tr.querySelector('[data-act="delete"]').addEventListener("click", () => {
+          if (!confirm(`حذف ${t.id}؟`)) return;
+          tasks = tasks.filter(x => x.id !== t.id);
+          delete checks[t.id];
+          saveDraft();
+          render();
+          toast(`اتحذف ${t.id}`);
         });
       }
 
       return tr;
     }
 
-    function fillBody(bodyId, countId, tasks) {
+    function fillBody(bodyId, countId, list) {
       const body = document.getElementById(bodyId);
       body.innerHTML = "";
       let total = 0, doneCount = 0;
-      tasks.forEach(t => {
+      list.forEach(t => {
         const isDone = !!checks[t.id];
         total += 1;
         if (isDone) doneCount += 1;
@@ -475,20 +636,20 @@
 
     function render() {
       applyModeUi();
-      const dashOld = TASKS.filter(t => t.side === "dash" && !isNewTask(t));
-      const dashNew = TASKS.filter(t => t.side === "dash" && isNewTask(t));
-      const appOld = TASKS.filter(t => t.side === "app" && !isNewTask(t));
-      const appNew = TASKS.filter(t => t.side === "app" && isNewTask(t));
+      const dashOld = tasks.filter(t => t.side === "dash" && !isNewTask(t));
+      const dashNew = tasks.filter(t => t.side === "dash" && isNewTask(t));
+      const appOld = tasks.filter(t => t.side === "app" && !isNewTask(t));
+      const appNew = tasks.filter(t => t.side === "app" && isNewTask(t));
 
       fillBody("dashOldBody", "dashOldCount", dashOld);
       fillBody("dashNewBody", "dashNewCount", dashNew);
       fillBody("appOldBody", "appOldCount", appOld);
       fillBody("appNewBody", "appNewCount", appNew);
 
-      const done = Object.keys(checks).filter(k => checks[k]).length;
-      const total = TASKS.length;
+      const done = tasks.filter(t => checks[t.id]).length;
+      const total = tasks.length;
       document.getElementById("progressText").textContent = `${done} / ${total} منتهي`;
-      document.getElementById("progressBar").style.width = `${Math.round((done / total) * 100)}%`;
+      document.getElementById("progressBar").style.width = total ? `${Math.round((done / total) * 100)}%` : "0%";
     }
 
     async function loadPublishedState() {
@@ -496,20 +657,20 @@
         const res = await fetch(STATE_URL + "?t=" + Date.now(), { cache: "no-store" });
         if (!res.ok) throw new Error("fetch failed");
         const data = await res.json();
-        publishedChecks = mergeChecks(data.checks);
+        publishedTasks = Array.isArray(data.tasks) && data.tasks.length
+          ? cloneTasks(data.tasks)
+          : cloneTasks(DEFAULT_TASKS);
+        publishedChecks = mergeChecks(data.checks, publishedTasks);
       } catch (_) {
-        publishedChecks = defaultMap();
+        publishedTasks = cloneTasks(DEFAULT_TASKS);
+        publishedChecks = defaultMap(publishedTasks);
       }
 
       if (canEdit) {
-        try {
-          const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
-          checks = draft && draft.checks ? mergeChecks(draft.checks) : { ...publishedChecks };
-        } catch (_) {
-          checks = { ...publishedChecks };
-        }
+        loadDraftIntoEditor();
       } else {
-        checks = { ...publishedChecks };
+        tasks = cloneTasks(publishedTasks);
+        checks = mergeChecks(publishedChecks, tasks);
       }
       render();
     }
@@ -564,7 +725,9 @@
     document.getElementById("lockBtn").addEventListener("click", () => {
       canEdit = false;
       sessionStorage.removeItem(EDIT_SESSION_KEY);
-      checks = { ...publishedChecks };
+      tasks = cloneTasks(publishedTasks);
+      checks = mergeChecks(publishedChecks, tasks);
+      closeTaskModal();
       render();
       toast(isRememberedOwner()
         ? "اتقفل لهذه الجلسة — هيرجع تلقائي لو فتحت تاني على نفس المتصفح"
@@ -576,9 +739,86 @@
       localStorage.removeItem(OWNER_STORE_KEY);
       canEdit = false;
       sessionStorage.removeItem(EDIT_SESSION_KEY);
-      checks = { ...publishedChecks };
+      tasks = cloneTasks(publishedTasks);
+      checks = mergeChecks(publishedChecks, tasks);
+      closeTaskModal();
       render();
       toast("اتشال تذكير المالك من الجهاز");
+    });
+
+    document.getElementById("addTaskBtn").addEventListener("click", () => {
+      if (!canEdit) return;
+      openTaskModal(null);
+    });
+
+    document.getElementById("taskSide").addEventListener("change", (e) => {
+      if (document.getElementById("taskEditMode").value !== "add") return;
+      document.getElementById("taskId").value = suggestNextId(e.target.value);
+    });
+
+    document.getElementById("taskCancelBtn").addEventListener("click", closeTaskModal);
+    document.getElementById("taskModal").addEventListener("click", (e) => {
+      if (e.target.id === "taskModal") closeTaskModal();
+    });
+
+    document.getElementById("taskDeleteBtn").addEventListener("click", () => {
+      const id = document.getElementById("taskOriginalId").value;
+      if (!id) return;
+      if (!confirm(`حذف ${id}؟`)) return;
+      tasks = tasks.filter(t => t.id !== id);
+      delete checks[id];
+      saveDraft();
+      closeTaskModal();
+      render();
+      toast(`اتحذف ${id}`);
+    });
+
+    document.getElementById("taskForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (!canEdit) return;
+
+      const mode = document.getElementById("taskEditMode").value;
+      const originalId = document.getElementById("taskOriginalId").value;
+      const id = document.getElementById("taskId").value.trim();
+      const side = document.getElementById("taskSide").value;
+      const tag = document.getElementById("taskTag").value;
+      const title = document.getElementById("taskTitle").value.trim();
+      const note = document.getElementById("taskNote").value.trim();
+      const markedDone = document.getElementById("taskDefaultDone").value === "true";
+
+      if (!id || !title) {
+        toast("الرقم والعنوان مطلوبين");
+        return;
+      }
+
+      const duplicate = tasks.some(t => t.id === id && !(mode === "edit" && t.id === originalId));
+      if (duplicate) {
+        toast("الرقم مستخدم قبل كده");
+        return;
+      }
+
+      const item = { id, side, title, tag, note, defaultDone: markedDone };
+
+      if (mode === "edit") {
+        const idx = tasks.findIndex(t => t.id === originalId);
+        if (idx < 0) {
+          toast("البند مش موجود");
+          return;
+        }
+        const wasChecked = !!checks[originalId];
+        if (originalId !== id) delete checks[originalId];
+        tasks[idx] = item;
+        checks[id] = markedDone || (originalId === id && wasChecked && markedDone) ? markedDone : markedDone;
+        checks[id] = markedDone;
+      } else {
+        tasks.push(item);
+        checks[id] = markedDone;
+      }
+
+      saveDraft();
+      closeTaskModal();
+      render();
+      toast(mode === "edit" ? `تم تعديل ${id}` : `تمت إضافة ${id}`);
     });
 
     document.getElementById("publishBtn").addEventListener("click", () => {
@@ -605,8 +845,11 @@
       try {
         const text = await file.text();
         const data = JSON.parse(text);
-        if (!data.checks) throw new Error("invalid");
-        checks = mergeChecks(data.checks);
+        if (!data.checks && !data.tasks) throw new Error("invalid");
+        if (Array.isArray(data.tasks) && data.tasks.length) {
+          tasks = cloneTasks(data.tasks);
+        }
+        checks = mergeChecks(data.checks || {}, tasks);
         saveDraft();
         render();
         toast("تم الاستيراد (مسودة)");
@@ -618,11 +861,11 @@
 
     document.getElementById("resetBtn").addEventListener("click", () => {
       if (!canEdit) return;
-      if (!confirm("هترجع العلامات للوضع الافتراضي. متأكد؟")) return;
-      checks = defaultMap();
+      if (!confirm("هترجع علامات ✓ فقط للوضع الافتراضي (من غير مسح البنود). متأكد؟")) return;
+      checks = defaultMap(tasks);
       saveDraft();
       render();
-      toast("اتعمل إعادة ضبط (مسودة)");
+      toast("اتعمل إعادة ضبط العلامات (مسودة)");
     });
 
     loadPublishedState();
