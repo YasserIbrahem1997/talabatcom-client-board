@@ -287,7 +287,8 @@
   <script>
     // Shared published state. Owner = GitHub repo owner (remembered device). Strangers = password.
     const STATE_URL = "board-state.json";
-    const DRAFT_KEY = "talabatcom-client-board-draft-v6";
+    // v7: finished «جديد» stays in جديد (tag new/hot) + checked — never move to قديم via tag:done
+    const DRAFT_KEY = "talabatcom-client-board-draft-v7";
     const EDIT_SESSION_KEY = "talabatcom-board-edit-ok";
     const OWNER_STORE_KEY = "talabatcom-board-github-owner-v1";
     const OWNER_LOGIN = "YasserIbrahem1997";
@@ -308,7 +309,7 @@
       { id: "D5", side: "dash", title: "تثبيت العنوان للأكونت", tag: "todo", defaultDone: false },
       { id: "D6", side: "dash", title: "تشغيل تحديد وقت الإشعارات (وقفت تاني)", tag: "todo", defaultDone: false },
       { id: "D7", side: "dash", title: "جدول زمني في وحدة التجارة الإلكترونية", tag: "done", note: "خلّص — تأكيد العميل 2026-11-12", defaultDone: true },
-      { id: "D8", side: "dash", title: "جدول زمني داخل إضافة المنتج (يظهر في العروض فقط)", tag: "done", note: "خلّص — تأكيد العميل 2026-11-12", defaultDone: true },
+      { id: "D8", side: "dash", title: "جدول زمني داخل إضافة المنتج (يظهر في العروض فقط)", tag: "hot", note: "شيت: جديد هام · خلّص — تأكيد العميل 2026-11-12", defaultDone: true },
       { id: "D9", side: "dash", title: "صفحة تصميم/كتابة للعروض", tag: "new", defaultDone: false },
       { id: "D10", side: "dash", title: "أيقونة جديدة في القائمة الرئيسية (مطاعم/محلات مختارة)", tag: "new", defaultDone: false },
       { id: "D11", side: "dash", title: "خصم بعدد طلبات/قيمة + إشعار للعميل", tag: "todo", defaultDone: false },
@@ -372,9 +373,9 @@
 
       { id: "A42", side: "app", title: "كوبونات التوصيل المجاني وخصم التوصيل مع المتاجر المتعددة (فاتورة الموبايل)", tag: "new", note: "خلّص 2026-11-22 — الخصم على (تكلفة التوصيل + رسوم المتعدد) ويظهر في الفاتورة", defaultDone: true },
 
-      { id: "X1", side: "app", title: "سعر السلة = اختيارات + إضافات (عرض واضح للعميل)", tag: "done", note: "مضاف نوفمبر 2026", defaultDone: true },
-      { id: "X2", side: "app", title: "إصلاح «المتجر مغلق» مع مواعيد overnight", tag: "done", note: "مضاف نوفمبر 2026", defaultDone: true },
-      { id: "X3", side: "app", title: "APK عميل 2026-11-09", tag: "done", defaultDone: true }
+      { id: "X1", side: "app", title: "سعر السلة = اختيارات + إضافات (عرض واضح للعميل)", tag: "new", note: "مضاف نوفمبر 2026 — خلّص", defaultDone: true },
+      { id: "X2", side: "app", title: "إصلاح «المتجر مغلق» مع مواعيد overnight", tag: "new", note: "مضاف نوفمبر 2026 — خلّص", defaultDone: true },
+      { id: "X3", side: "app", title: "APK عميل 2026-11-09", tag: "new", note: "خلّص", defaultDone: true }
     ];
 
     const TAG_LABEL = { done: "منتهى", new: "جديد", hot: "جديد هام", todo: "قديم/جاري" };
@@ -398,8 +399,8 @@
         const prev = map.get(t.id);
         map.set(t.id, prev ? { ...prev, ...t } : t);
       });
-      // Prefer DEFAULT title/tag/note for FORCE_DONE catalog ids when defaults newer
-      ["D26", "A42"].forEach(id => {
+      // Prefer DEFAULT for finished-new ids (stay in جديد/هام even if old draft had tag:done)
+      ["D8", "D26", "A42", "X1", "X2", "X3"].forEach(id => {
         const def = DEFAULT_TASKS.find(t => t.id === id);
         if (def) map.set(id, { ...cloneTasks([def])[0] });
       });
